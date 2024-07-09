@@ -13,9 +13,9 @@ use sc_service::{error::Error as ServiceError, Configuration, PartialComponents,
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_api::ConstructRuntimeApi;
-use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use sp_core::U256;
 use sp_runtime::traits::Block as BlockT;
+use bolarity_runtime::RuntimeApi;
 
 // Runtime
 use bolarity_runtime::{opaque::Block, Hash, TransactionConverter};
@@ -34,14 +34,35 @@ pub use crate::{
 	eth::{db_config_dir, EthConfiguration},
 };
 
+/// Host functions required for kitchensink runtime and Substrate node.
+#[cfg(not(feature = "runtime-benchmarks"))]
+pub type HostFunctions =
+(sp_io::SubstrateHostFunctions, sp_statement_store::runtime_api::HostFunctions);
+
+/// Host functions required for kitchensink runtime and Substrate node.
+#[cfg(feature = "runtime-benchmarks")]
+pub type HostFunctions = (
+	sp_io::SubstrateHostFunctions,
+	sp_statement_store::runtime_api::HostFunctions,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
+
+/// A specialized `WasmExecutor` intended to use across substrate node. It provides all required
+/// HostFunctions.
+pub type RuntimeExecutor = sc_executor::WasmExecutor<HostFunctions>;
+
 type BasicImportQueue = sc_consensus::DefaultImportQueue<Block>;
 type FullPool<Client> = sc_transaction_pool::FullPool<Block, Client>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 type GrandpaBlockImport<Client> =
 	sc_consensus_grandpa::GrandpaBlockImport<FullBackend, Block, Client, FullSelectChain>;
+type FullGrandpaBlockImport =
+sc_consensus_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient<RuntimeApi, HostFunctions>, FullSelectChain>;
 type GrandpaLinkHalf<Client> = sc_consensus_grandpa::LinkHalf<Block, Client, FullSelectChain>;
 type BoxBlockImport = sc_consensus::BoxBlockImport<Block>;
+type FullBeefyBlockImport<InnerBlockImport> =
+	sc_consensus_beefy::import::BeefyBlockImport<Block, FullBackend, FullClient<RuntimeApi, HostFunctions>, InnerBlockImport>;
 
 /// The minimum period of blocks on which justifications will be
 /// imported and generated.
@@ -50,7 +71,7 @@ const GRANDPA_JUSTIFICATION_PERIOD: u32 = 512;
 pub fn new_partial<RuntimeApi, Executor, BIQ>(
 	config: &Configuration,
 	eth_config: &EthConfiguration,
-	build_import_queue: BIQ,
+	// build_import_queue: BIQ,
 ) -> Result<
 	PartialComponents<
 		FullClient<RuntimeApi, Executor>,
@@ -73,14 +94,14 @@ where
 	RuntimeApi: Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: BaseRuntimeApiCollection + EthCompatRuntimeApiCollection,
 	Executor: NativeExecutionDispatch + 'static,
-	BIQ: FnOnce(
-		Arc<FullClient<RuntimeApi, Executor>>,
-		&Configuration,
-		&EthConfiguration,
-		&TaskManager,
-		Option<TelemetryHandle>,
-		GrandpaBlockImport<FullClient<RuntimeApi, Executor>>,
-	) -> Result<(BasicImportQueue, BoxBlockImport), ServiceError>,
+	// BIQ: FnOnce(
+	// 	Arc<FullClient<RuntimeApi, Executor>>,
+	// 	&Configuration,
+	// 	&EthConfiguration,
+	// 	&TaskManager,
+	// 	Option<TelemetryHandle>,
+	// 	GrandpaBlockImport<FullClient<RuntimeApi, Executor>>,
+	// ) -> Result<(BasicImportQueue, BoxBlockImport), ServiceError>,
 {
 	let telemetry = config
 		.telemetry_endpoints
@@ -111,6 +132,15 @@ where
 	});
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
+
+	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
+		config.transaction_pool.clone(),
+		config.role.is_authority().into(),
+		config.prometheus_registry(),
+		task_manager.spawn_essential_handle(),
+		client.clone(),
+	);
+
 	let (grandpa_block_import, grandpa_link) = sc_consensus_grandpa::block_import(
 		client.clone(),
 		GRANDPA_JUSTIFICATION_PERIOD,
@@ -118,6 +148,57 @@ where
 		select_chain.clone(),
 		telemetry.as_ref().map(|x| x.handle()),
 	)?;
+	let justification_import = grandpa_block_import.clone();
+
+	let (beefy_block_import, beefy_voter_links, beefy_rpc_links) =
+		sc_consensus_beefy::beefy_block_import_and_links(
+			grandpa_block_import,
+			backend.clone(),
+			client.clone(),
+			config.prometheus_registry().cloned(),
+		);
+
+	let (block_import, babe_link) = sc_consensus_babe::block_import(
+		sc_consensus_babe::configuration(&*client)?,
+		beefy_block_import,
+		client.clone(),
+	)?;
+	let slot_duration = babe_link.config().slot_duration();
+
+	let (import_queue, babe_worker_handle) =
+		sc_consensus_babe::import_queue(sc_consensus_babe::ImportQueueParams {
+			link: babe_link.clone(),
+			block_import: block_import.clone(),
+			justification_import: Some(Box::new(justification_import)),
+			client: client.clone(),
+			select_chain: select_chain.clone(),
+			create_inherent_data_providers: move |_, ()| async move {
+				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+				let slot =
+					sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+						*timestamp,
+						slot_duration,
+					);
+
+				Ok((slot, timestamp))
+			},
+			spawner: &task_manager.spawn_essential_handle(),
+			registry: config.prometheus_registry(),
+			telemetry: telemetry.as_ref().map(|x| x.handle()),
+			offchain_tx_pool_factory: OffchainTransactionPoolFactory::new(transaction_pool.clone()),
+		})?;
+
+	let import_setup = (block_import, grandpa_link, babe_link, beefy_voter_links);
+	let statement_store = sc_statement_store::Store::new_shared(
+		&config.data_path,
+		Default::default(),
+		client.clone(),
+		keystore_container.local_keystore(),
+		config.prometheus_registry(),
+		&task_manager.spawn_handle(),
+	)
+		.map_err(|e| ServiceError::Other(format!("Statement store error: {:?}", e)))?;
 
 	let storage_override = Arc::new(StorageOverrideHandler::new(client.clone()));
 	let frontier_backend = match eth_config.frontier_backend_type {
@@ -149,22 +230,16 @@ where
 		}
 	};
 
-	let (import_queue, block_import) = build_import_queue(
-		client.clone(),
-		config,
-		eth_config,
-		&task_manager,
-		telemetry.as_ref().map(|x| x.handle()),
-		grandpa_block_import,
-	)?;
+	// let (import_queue, block_import) = build_import_queue(
+	// 	client.clone(),
+	// 	config,
+	// 	eth_config,
+	// 	&task_manager,
+	// 	telemetry.as_ref().map(|x| x.handle()),
+	// 	grandpa_block_import,
+	// )?;
 
-	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
-		config.transaction_pool.clone(),
-		config.role.is_authority().into(),
-		config.prometheus_registry(),
-		task_manager.spawn_essential_handle(),
-		client.clone(),
-	);
+
 
 	Ok(PartialComponents {
 		client,
@@ -176,8 +251,10 @@ where
 		transaction_pool,
 		other: (
 			telemetry,
-			block_import,
-			grandpa_link,
+			// block_import,
+			// grandpa_link,
+			import_setup,
+			statement_store,
 			frontier_backend,
 			storage_override,
 		),
@@ -272,11 +349,11 @@ where
 	Executor: NativeExecutionDispatch + 'static,
 	N: sc_network::NetworkBackend<Block, <Block as BlockT>::Hash>,
 {
-	let build_import_queue = if sealing.is_some() {
-		build_manual_seal_import_queue::<RuntimeApi, Executor>
-	} else {
-		build_aura_grandpa_import_queue::<RuntimeApi, Executor>
-	};
+	// let build_import_queue = if sealing.is_some() {
+	// 	build_manual_seal_import_queue::<RuntimeApi, Executor>
+	// } else {
+	// 	build_aura_grandpa_import_queue::<RuntimeApi, Executor>
+	// };
 
 	let PartialComponents {
 		client,
@@ -287,7 +364,7 @@ where
 		select_chain,
 		transaction_pool,
 		other: (mut telemetry, block_import, grandpa_link, frontier_backend, storage_override),
-	} = new_partial(&config, &eth_config, build_import_queue)?;
+	} = new_partial(&config, &eth_config)?;
 
 	let FrontierPartialComponents {
 		filter_pool,
