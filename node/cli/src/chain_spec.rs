@@ -38,7 +38,7 @@ use sp_runtime::{
 };
 
 pub use bolarity_runtime::RuntimeGenesisConfig;
-pub use crate::primitives::{AccountId, Balance, Signature};
+pub use node_primitives::{AccountId, Balance, Signature};
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -63,10 +63,6 @@ pub struct Extensions {
 
 /// Specialized `ChainSpec`.
 pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensions>;
-/// Flaming Fir testnet generator
-pub fn flaming_fir_config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../res/flaming-fir.json")[..])
-}
 
 fn session_keys(
 	grandpa: GrandpaId,

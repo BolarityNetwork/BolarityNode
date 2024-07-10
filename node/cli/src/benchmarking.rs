@@ -23,7 +23,7 @@
 use crate::service::{create_extrinsic, FullClient};
 
 use bolarity_runtime::{BalancesCall, SystemCall};
-use crate::primitives::{AccountId, Balance};
+use node_primitives::{AccountId, Balance};
 use sc_cli::Result;
 use sp_inherents::{InherentData, InherentDataProvider};
 use sp_keyring::Sr25519Keyring;

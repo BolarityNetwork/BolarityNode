@@ -26,7 +26,7 @@ use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 use frame_system_rpc_runtime_api::AccountNonceApi;
 use futures::prelude::*;
 use bolarity_runtime::RuntimeApi;
-use crate::primitives::Block;
+use node_primitives::Block;
 use sc_client_api::{Backend, BlockBackend};
 use sc_consensus_babe::{self, SlotProportion};
 use sc_network::{
@@ -42,12 +42,12 @@ use sp_core::crypto::Pair;
 use sp_runtime::{generic, traits::Block as BlockT, SaturatedConversion};
 use std::{path::Path, sync::Arc};
 
-/// Host functions required for bolarity runtime and Substrate node.
+/// Host functions required for kitchensink runtime and Substrate node.
 #[cfg(not(feature = "runtime-benchmarks"))]
 pub type HostFunctions =
 	(sp_io::SubstrateHostFunctions, sp_statement_store::runtime_api::HostFunctions);
 
-/// Host functions required for bolarity runtime and Substrate node.
+/// Host functions required for kitchensink runtime and Substrate node.
 #[cfg(feature = "runtime-benchmarks")]
 pub type HostFunctions = (
 	sp_io::SubstrateHostFunctions,
@@ -126,6 +126,7 @@ pub fn create_extrinsic(
 					bolarity_runtime::Runtime,
 				>::from(tip, None),
 			),
+			frame_metadata_hash_extension::CheckMetadataHash::new(false),
 		);
 
 	let raw_payload = bolarity_runtime::SignedPayload::from_raw(
@@ -140,6 +141,7 @@ pub fn create_extrinsic(
 			(),
 			(),
 			(),
+			None,
 		),
 	);
 	let signature = raw_payload.using_encoded(|e| sender.sign(e));
@@ -841,7 +843,7 @@ mod tests {
 		constants::{currency::CENTS, time::SLOT_DURATION},
 		Address, BalancesCall, RuntimeCall, UncheckedExtrinsic,
 	};
-	use crate::primitives::{Block, DigestItem, Signature};
+	use node_primitives::{Block, DigestItem, Signature};
 	use sc_client_api::BlockBackend;
 	use sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy};
 	use sc_consensus_babe::{BabeIntermediate, CompatibleDigestItem, INTERMEDIATE_KEY};
@@ -1041,6 +1043,7 @@ mod tests {
 				let tx_payment = pallet_skip_feeless_payment::SkipCheckIfFeeless::from(
 					pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::from(0, None),
 				);
+				let metadata_hash = frame_metadata_hash_extension::CheckMetadataHash::new(false);
 				let extra = (
 					check_non_zero_sender,
 					check_spec_version,
@@ -1050,11 +1053,22 @@ mod tests {
 					check_nonce,
 					check_weight,
 					tx_payment,
+					metadata_hash,
 				);
 				let raw_payload = SignedPayload::from_raw(
 					function,
 					extra,
-					((), spec_version, transaction_version, genesis_hash, genesis_hash, (), (), ()),
+					(
+						(),
+						spec_version,
+						transaction_version,
+						genesis_hash,
+						genesis_hash,
+						(),
+						(),
+						(),
+						None,
+					),
 				);
 				let signature = raw_payload.using_encoded(|payload| signer.sign(payload));
 				let (function, extra, _) = raw_payload.deconstruct();
