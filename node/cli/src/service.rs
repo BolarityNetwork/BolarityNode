@@ -42,12 +42,12 @@ use sp_core::crypto::Pair;
 use sp_runtime::{generic, traits::Block as BlockT, SaturatedConversion};
 use std::{path::Path, sync::Arc};
 
-/// Host functions required for kitchensink runtime and Substrate node.
+/// Host functions required for bolarity runtime and Substrate node.
 #[cfg(not(feature = "runtime-benchmarks"))]
 pub type HostFunctions =
 	(sp_io::SubstrateHostFunctions, sp_statement_store::runtime_api::HostFunctions);
 
-/// Host functions required for kitchensink runtime and Substrate node.
+/// Host functions required for bolarity runtime and Substrate node.
 #[cfg(feature = "runtime-benchmarks")]
 pub type HostFunctions = (
 	sp_io::SubstrateHostFunctions,

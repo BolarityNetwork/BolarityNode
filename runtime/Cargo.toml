@@ -29,7 +29,7 @@ serde_json = { features = ["alloc", "arbitrary_precision"], workspace = true }
 # pallet-asset-conversion: turn on "num-traits" feature
 primitive-types = { workspace = true, default-features = false, features = ["codec", "num-traits", "scale-info"] }
 
-# primitives
+# substrate primitives
 sp-authority-discovery = { workspace = true, default-features = false, features = ["serde"] }
 sp-consensus-babe = { workspace = true, default-features = false, features = ["serde"] }
 beefy-primitives = { workspace = true, default-features = false }
@@ -52,7 +52,7 @@ sp-statement-store = { workspace = true, default-features = false, features = ["
 sp-version = { workspace = true, default-features = false, features = ["serde"] }
 sp-io = { workspace = true, default-features = false }
 
-# frame dependencies
+# substrate frame dependencies
 frame-executive = { workspace = true, default-features = false }
 frame-benchmarking = { workspace = true, default-features = false }
 frame-benchmarking-pallet-pov = { workspace = true, default-features = false }
@@ -146,11 +146,29 @@ pallet-tx-pause = { workspace = true, default-features = false }
 pallet-safe-mode = { workspace = true, default-features = false }
 pallet-parameters = { workspace = true, default-features = false }
 
+# Frontier
+fp-account = { workspace = true, features = ["serde"] }
+fp-evm = { workspace = true, features = ["serde"] }
+fp-rpc = { workspace = true }
+fp-self-contained = { workspace = true, features = ["serde"] }
+
+# Frontier FRAME
+pallet-base-fee = { workspace = true }
+pallet-dynamic-fee = { workspace = true }
+pallet-ethereum = { workspace = true }
+pallet-evm = { workspace = true }
+pallet-evm-chain-id = { workspace = true }
+pallet-evm-precompile-modexp = { workspace = true }
+pallet-evm-precompile-sha3fips = { workspace = true }
+pallet-evm-precompile-simple = { workspace = true }
+
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
 
 [features]
-default = ["std"]
+default = ["std", "with-rocksdb-weights"]
+with-rocksdb-weights = []
+with-paritydb-weights = []
 with-tracing = ["frame-executive/with-tracing"]
 std = [
 	"codec/std",
@@ -271,6 +289,20 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-version/std",
 	"substrate-wasm-builder",
+	# Frontier
+	"fp-account/std",
+	"fp-evm/std",
+	"fp-rpc/std",
+	"fp-self-contained/std",
+	# Frontier FRAME
+	"pallet-base-fee/std",
+	"pallet-dynamic-fee/std",
+	"pallet-ethereum/std",
+	"pallet-evm/std",
+	"pallet-evm-chain-id/std",
+	"pallet-evm-precompile-modexp/std",
+	"pallet-evm-precompile-sha3fips/std",
+	"pallet-evm-precompile-simple/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking-pallet-pov/runtime-benchmarks",
@@ -348,6 +380,9 @@ runtime-benchmarks = [
 	"pallet-whitelist/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"sp-staking/runtime-benchmarks",
+	"pallet-ethereum/runtime-benchmarks",
+	"pallet-evm/runtime-benchmarks",
+
 ]
 try-runtime = [
 	"frame-benchmarking-pallet-pov/try-runtime",

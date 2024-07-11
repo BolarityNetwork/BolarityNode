@@ -25,12 +25,14 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	MultiSignature, OpaqueExtrinsic,
 };
+use sp_core::H256;
+use fp_account::EthereumSignature;
 
 /// An index to a block.
 pub type BlockNumber = u32;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = MultiSignature;
+pub type Signature = EthereumSignature;
 
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
@@ -49,7 +51,13 @@ pub type Moment = u64;
 pub type Nonce = u32;
 
 /// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
+pub type Hash = H256;
+
+/// The hashing algorithm used by the chain.
+pub type Hashing = BlakeTwo256;
+
+/// The address format for describing accounts.
+pub type Address = AccountId;
 
 /// A timestamp: milliseconds since the unix epoch.
 /// `u64` is enough to represent a duration of half a billion years, when the
@@ -60,7 +68,5 @@ pub type Timestamp = u64;
 pub type DigestItem = generic::DigestItem;
 /// Header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-/// Block type.
-pub type Block = generic::Block<Header, OpaqueExtrinsic>;
-/// Block ID.
-pub type BlockId = generic::BlockId<Block>;
+
+

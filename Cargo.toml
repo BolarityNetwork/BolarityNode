@@ -233,6 +233,46 @@ frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", b
 substrate-rpc-client = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
 substrate-cli-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
 
+# Arkworks
+ark-bls12-377 = { version = "0.4.0", default-features = false, features = ["curve"] }
+ark-bls12-381 = { version = "0.4.0", default-features = false, features = ["curve"] }
+ark-bw6-761 = { version = "0.4.0", default-features = false }
+ark-ec = { version = "0.4.0", default-features = false }
+ark-ff = { version = "0.4.0", default-features = false }
+ark-std = { version = "0.4.0", default-features = false }
+
+# Frontier Client
+fc-api = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0" }
+fc-cli = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fc-consensus = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0" }
+fc-db = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fc-mapping-sync = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fc-rpc = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fc-rpc-core = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0" }
+fc-storage = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0" }
+# Frontier Primitive
+fp-account = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fp-consensus = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fp-dynamic-fee = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fp-ethereum = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fp-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fp-rpc = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fp-self-contained = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+fp-storage = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+# Frontier FRAME
+pallet-base-fee = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-dynamic-fee = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-ethereum = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-evm-chain-id = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-evm-precompile-modexp = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-evm-precompile-sha3fips = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-evm-precompile-simple = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+pallet-evm-test-vector-support = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0" }
+pallet-hotfix-sufficients = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+# Frontier Utility
+precompile-utils = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.11.0", default-features = false }
+
 
 
 
