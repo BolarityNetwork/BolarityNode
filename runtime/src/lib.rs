@@ -105,12 +105,6 @@ pub use pallet_sudo::Call as SudoCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-/// Implementations of some helper traits passed into runtime modules as associated types.
-// pub mod impls;
-// #[cfg(not(feature = "runtime-benchmarks"))]
-// use impls::AllianceIdentityVerifier;
-// use impls::{AllianceProposalProvider, Author, CreditToBlockAuthor};
-
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
