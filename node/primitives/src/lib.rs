@@ -23,7 +23,6 @@
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic,
 };
 use sp_core::H256;
 use fp_account::EthereumSignature;
