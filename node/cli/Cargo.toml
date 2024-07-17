@@ -25,6 +25,7 @@ jsonrpsee = { workspace = true, features = ["server"] }
 futures = {  workspace = true }
 log = { workspace = true, default-features = true }
 rand = { workspace = true }
+hex-literal = { workspace = true }
 
 # primitives
 sp-authority-discovery = { workspace = true }
@@ -104,6 +105,20 @@ node-primitives = { path = "../primitives" }
 sc-cli = { workspace = true, optional = true }
 frame-benchmarking-cli = { workspace = true, optional = true }
 serde_json = { workspace = true, default-features = true }
+
+# Frontier
+fc-api = { workspace = true }
+fc-cli = { workspace = true }
+fc-consensus = { workspace = true }
+fc-db = { workspace = true }
+fc-mapping-sync = { workspace = true }
+fc-rpc = { workspace = true }
+fc-rpc-core = { workspace = true }
+fc-storage = { workspace = true }
+fp-account = { workspace = true }
+fp-dynamic-fee = { workspace = true, features = ["default"] }
+fp-evm = { workspace = true, features = ["default"] }
+fp-rpc = { workspace = true, features = ["default"] }
 
 [dev-dependencies]
 sc-keystore = { workspace = true }

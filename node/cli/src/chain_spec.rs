@@ -18,27 +18,30 @@
 
 //! Substrate chain configurations.
 
+use hex_literal::hex;
 use beefy_primitives::ecdsa_crypto::AuthorityId as BeefyId;
 use grandpa_primitives::AuthorityId as GrandpaId;
 use bolarity_runtime::{
-	constants::currency::*, wasm_binary_unwrap, Block, MaxNominations, SessionKeys, StakerStatus,
+	constants::currency::*, wasm_binary_unwrap, Block, MaxNominations, opaque::SessionKeys, StakerStatus,
+	WASM_BINARY, SS58Prefix
 };
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
-use sc_chain_spec::ChainSpecExtension;
+use sc_chain_spec::{ChainSpecExtension, Properties};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
-use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public, H160, U256, ecdsa};
 use sp_mixnet::types::AuthorityId as MixnetId;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	Perbill,
 };
 
-pub use bolarity_runtime::RuntimeGenesisConfig;
+pub use bolarity_runtime::{RuntimeGenesisConfig, WASM_BINARY};
 pub use node_primitives::{AccountId, Balance, Signature};
+use std::{collections::BTreeMap, str::FromStr};
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -70,9 +73,8 @@ fn session_keys(
 	im_online: ImOnlineId,
 	authority_discovery: AuthorityDiscoveryId,
 	mixnet: MixnetId,
-	beefy: BeefyId,
 ) -> SessionKeys {
-	SessionKeys { grandpa, babe, im_online, authority_discovery, mixnet, beefy }
+	SessionKeys { grandpa, babe, im_online, authority_discovery, mixnet }
 }
 
 fn configure_accounts_for_staging_testnet() -> (
@@ -223,7 +225,7 @@ fn configure_accounts_for_staging_testnet() -> (
 fn staging_testnet_config_genesis() -> serde_json::Value {
 	let (initial_authorities, root_key, endowed_accounts) =
 		configure_accounts_for_staging_testnet();
-	testnet_genesis(initial_authorities, vec![], root_key, Some(endowed_accounts))
+	testnet_genesis(initial_authorities, vec![], root_key, Some(endowed_accounts), 42)
 }
 
 /// Staging testnet config.
@@ -261,8 +263,8 @@ pub fn authority_keys_from_seed(
 ) -> (AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId, MixnetId, BeefyId)
 {
 	(
-		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
-		get_account_id_from_seed::<sr25519::Public>(seed),
+		get_account_id_from_seed::<ecdsa::Public>(&format!("{}//stash", seed)),
+		get_account_id_from_seed::<ecdsa::Public>(seed),
 		get_from_seed::<GrandpaId>(seed),
 		get_from_seed::<BabeId>(seed),
 		get_from_seed::<ImOnlineId>(seed),
@@ -303,18 +305,18 @@ fn configure_accounts(
 ) {
 	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			get_account_id_from_seed::<sr25519::Public>("Eve"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+			get_account_id_from_seed::<ecdsa::Public>("Alice"),
+			get_account_id_from_seed::<ecdsa::Public>("Bob"),
+			get_account_id_from_seed::<ecdsa::Public>("Charlie"),
+			get_account_id_from_seed::<ecdsa::Public>("Dave"),
+			get_account_id_from_seed::<ecdsa::Public>("Eve"),
+			get_account_id_from_seed::<ecdsa::Public>("Ferdie"),
+			get_account_id_from_seed::<ecdsa::Public>("Alice//stash"),
+			get_account_id_from_seed::<ecdsa::Public>("Bob//stash"),
+			get_account_id_from_seed::<ecdsa::Public>("Charlie//stash"),
+			get_account_id_from_seed::<ecdsa::Public>("Dave//stash"),
+			get_account_id_from_seed::<ecdsa::Public>("Eve//stash"),
+			get_account_id_from_seed::<ecdsa::Public>("Ferdie//stash"),
 		]
 	});
 	// endow all authorities and nominators.
@@ -367,9 +369,54 @@ pub fn testnet_genesis(
 	initial_nominators: Vec<AccountId>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
+	chain_id: u64,
 ) -> serde_json::Value {
 	let (initial_authorities, endowed_accounts, num_endowed_accounts, stakers) =
 		configure_accounts(initial_authorities, initial_nominators, endowed_accounts, STASH);
+
+	let evm_accounts = {
+		let mut map = BTreeMap::new();
+		map.insert(
+			// H160 address of Alice dev account
+			// Derived from SS58 (42 prefix) address
+			// SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+			// hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+			// Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
+			H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
+				.expect("internal H160 is valid; qed"),
+			fp_evm::GenesisAccount {
+				balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
+					.expect("internal U256 is valid; qed"),
+				code: Default::default(),
+				nonce: Default::default(),
+				storage: Default::default(),
+			},
+		);
+		map.insert(
+			// H160 address of CI test runner account
+			H160::from_str("6be02d1d3665660d22ff9624b7be0551ee1ac91b")
+				.expect("internal H160 is valid; qed"),
+			fp_evm::GenesisAccount {
+				balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
+					.expect("internal U256 is valid; qed"),
+				code: Default::default(),
+				nonce: Default::default(),
+				storage: Default::default(),
+			},
+		);
+		map.insert(
+			// H160 address for benchmark usage
+			H160::from_str("1000000000000000000000000000000000000001")
+				.expect("internal H160 is valid; qed"),
+			fp_evm::GenesisAccount {
+				nonce: U256::from(1),
+				balance: U256::from(1_000_000_000_000_000_000_000_000u128),
+				storage: Default::default(),
+				code: vec![0x00],
+			},
+		);
+		map
+	};
 
 	serde_json::json!({
 		"balances": {
@@ -421,24 +468,29 @@ pub fn testnet_genesis(
 			"epochConfig": Some(bolarity_runtime::BABE_GENESIS_EPOCH_CONFIG),
 		},
 		"society": { "pot": 0 },
-		"assets": {
-			// This asset is used by the NIS pallet as counterpart currency.
-			"assets": vec![(9, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1)],
-		},
 		"nominationPools": {
 			"minCreateBond": 10 * DOLLARS,
 			"minJoinBond": 1 * DOLLARS,
 		},
+		"evmChainId": { "chainId": chain_id },
+		"evm": { "accounts": evm_accounts },
 	})
 }
 
-fn development_config_genesis_json() -> serde_json::Value {
-	testnet_genesis(
-		vec![authority_keys_from_seed("Alice")],
-		vec![],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
-	)
+// fn development_config_genesis_json() -> serde_json::Value {
+// 	testnet_genesis(
+// 		vec![],
+// 		vec![],
+// 		get_account_id_from_seed::<ecdsa::Public>("Alice"),
+// 		None,
+// 	)
+// }
+
+fn properties() -> Properties {
+	let mut properties = Properties::new();
+	properties.insert("tokenDecimals".into(), 18.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+	properties
 }
 
 /// Development config (single validator Alice).
@@ -447,7 +499,25 @@ pub fn development_config() -> ChainSpec {
 		.with_name("Development")
 		.with_id("dev")
 		.with_chain_type(ChainType::Development)
-		.with_genesis_config_patch(development_config_genesis_json())
+		.with_properties(properties())
+		.with_genesis_config_patch(testnet_genesis(
+			// Initial PoA authorities
+			vec![authority_keys_from_seed("Alice")],
+			vec![],
+			// Sudo account (Alith)
+			AccountId::from(hex!("f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac")),
+			// Pre-funded accounts
+			Some(vec![
+				AccountId::from(hex!("f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac")), // Alith
+				AccountId::from(hex!("3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0")), // Baltathar
+				AccountId::from(hex!("798d4Ba9baf0064Ec19eB4F0a1a45785ae9D6DFc")), // Charleth
+				AccountId::from(hex!("773539d4Ac0e786233D90A233654ccEE26a613D9")), // Dorothy
+				AccountId::from(hex!("Ff64d3F6efE2317EE2807d223a0Bdc4c0c49dfDB")), // Ethan
+				AccountId::from(hex!("C0F0f4ab324C46e55D02D0033343B4Be8A55532d")), // Faith
+			]),
+			// Ethereum chain ID
+			SS58Prefix::get() as u64,
+		))
 		.build()
 }
 
@@ -455,8 +525,17 @@ fn local_testnet_genesis() -> serde_json::Value {
 	testnet_genesis(
 		vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
 		vec![],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
+		AccountId::from(hex!("f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac")),
+		// Pre-funded accounts
+		Some(vec![
+			AccountId::from(hex!("f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac")), // Alith
+			AccountId::from(hex!("3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0")), // Baltathar
+			AccountId::from(hex!("798d4Ba9baf0064Ec19eB4F0a1a45785ae9D6DFc")), // Charleth
+			AccountId::from(hex!("773539d4Ac0e786233D90A233654ccEE26a613D9")), // Dorothy
+			AccountId::from(hex!("Ff64d3F6efE2317EE2807d223a0Bdc4c0c49dfDB")), // Ethan
+			AccountId::from(hex!("C0F0f4ab324C46e55D02D0033343B4Be8A55532d")), // Faith
+		]),
+		42,
 	)
 }
 
@@ -486,7 +565,7 @@ pub(crate) mod tests {
 			.with_genesis_config_patch(testnet_genesis(
 				vec![authority_keys_from_seed("Alice")],
 				vec![],
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_account_id_from_seed::<ecdsa::Public>("Alice"),
 				None,
 			))
 			.build()

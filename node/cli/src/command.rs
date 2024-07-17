@@ -23,7 +23,6 @@ use crate::{
 	cli::{Cli, Subcommand},
 };
 use frame_benchmarking_cli::*;
-use bolarity_runtime::ExistentialDeposit;
 use node_primitives::Block;
 use sc_cli::{Result, SubstrateCli};
 use sc_service::PartialComponents;
