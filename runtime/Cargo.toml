@@ -88,7 +88,8 @@ pallet-evm-precompile-simple = { workspace = true }
 pallet-evm-precompile-dispatch = { workspace = true }
 pallet-hotfix-sufficients = { workspace = true }
 
-
+# Local Pallet
+pallet-template = { path = "../pallets/template", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }

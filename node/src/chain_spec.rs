@@ -29,7 +29,7 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig>;
 
-// Public accoint type
+// Public account type
 #[allow(dead_code)]
 type AccountPublic = <Signature as Verify>::Signer;
 

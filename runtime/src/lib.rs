@@ -1254,6 +1254,12 @@ impl pallet_hotfix_sufficients::Config for Runtime {
     type WeightInfo = pallet_hotfix_sufficients::weights::SubstrateWeight<Self>;
 }
 
+/// Configure the pallet-template in pallets/template.
+impl pallet_template::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
+}
+
 // Construct runtime
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -1297,6 +1303,8 @@ construct_runtime!(
         // Smart contracts
         RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip,
         Contracts: pallet_contracts,
+
+        TemplateModule: pallet_template,
     }
 );
 
@@ -1441,6 +1449,7 @@ mod benches {
         [pallet_timestamp, Timestamp]
         [pallet_sudo, Sudo]
         [pallet_evm, EVM]
+        [pallet_template, TemplateModule]
     );
 }
 
