@@ -48,7 +48,7 @@ pub fn development_config() -> ChainSpec {
             // Pre-funded accounts
             vec![alith(), baltathar(), charleth(), dorothy(), ethan(), faith(), goliath()],
             // Initial Validators and PoA authorities
-            vec![authority_keys_from_seed("Alice")],
+            vec![alice_session_keys()],
             // Initial nominators
             vec![],
             // Ethereum chain ID
@@ -72,7 +72,7 @@ pub fn local_testnet_config() -> ChainSpec {
             alith(),
             // Pre-funded accounts
             vec![alith(), baltathar(), charleth(), dorothy(), ethan(), faith(), goliath()],
-            vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
+            vec![alice_session_keys(), bob_session_keys()],
             vec![],
             // Ethereum chain ID
             SS58Prefix::get() as u64,
@@ -162,7 +162,7 @@ fn testnet_genesis(
             // SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
             // hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
             // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
-            H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
+            H160::from_str("8097c3C354652CB1EEed3E5B65fBa2576470678A")
                 .expect("internal H160 is valid; qed"),
             fp_evm::GenesisAccount {
                 balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
@@ -278,6 +278,44 @@ mod devnet_keys {
 
     pub(super) fn goliath() -> AccountId {
         AccountId::from(hex!("7BF369283338E12C90514468aa3868A551AB2929"))
+    }
+
+    pub(super) fn alice_session_keys() -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
+        (
+            AccountId::from(hex!("487d29457e604aa45c35778Af0d76fCCaC195822")), // stash
+            AccountId::from(hex!("8097c3C354652CB1EEed3E5B65fBa2576470678A")), // controller
+            sp_core::sr25519::Public::from_raw(hex!(
+                "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+            ))
+                .into(),
+            sp_core::ed25519::Public::from_raw(hex!(
+                "88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee"
+            ))
+                .into(),
+            sp_core::sr25519::Public::from_raw(hex!(
+                "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+            ))
+                .into(),
+        )
+    }
+
+    pub(super) fn bob_session_keys() -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
+        (
+            AccountId::from(hex!("9D370e560F42d1041eE835169df9A921A6e2589A")), // stash
+            AccountId::from(hex!("9Ab9804Ff30EB824b5410FC14231C1cA47A879E8")), // controller
+            sp_core::sr25519::Public::from_raw(hex!(
+                "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+            ))
+                .into(),
+            sp_core::ed25519::Public::from_raw(hex!(
+                "d17c2d7823ebf260fd138f2d7e27d114c0145d968b5ff5006125f2414fadae69"
+            ))
+                .into(),
+            sp_core::sr25519::Public::from_raw(hex!(
+                "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+            ))
+                .into(),
+        )
     }
 }
 
