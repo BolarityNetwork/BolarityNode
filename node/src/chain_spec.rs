@@ -285,59 +285,59 @@ mod testnet_keys {
     use super::*;
 
     pub(super) fn lionel() -> AccountId {
-        AccountId::from(hex!("08e390762f64ABA6F9F9269589e1A702623e90F1"))
+        AccountId::from(hex!("1A5E1E46079b69f8c3bB853253005595776B292a"))
     }
 
     pub(super) fn diego() -> AccountId {
-        AccountId::from(hex!("d04a0d2CfBA9d3ae7054dF317e5e1E6bBbBA2472"))
+        AccountId::from(hex!("ecE34A4eAb98014B6118Af57737cF20e8C7B6cB7"))
     }
 
     pub(super) fn pele() -> AccountId {
-        AccountId::from(hex!("8834dc7eB54957Bf37CAC825E93D9632dC42c3f2"))
+        AccountId::from(hex!("a70bc22F1b546A070769002E9cd909e15b09A47A"))
     }
 
     pub(super) fn franz() -> AccountId {
-        AccountId::from(hex!("5124ed655cc596DBD17afddE990E46857B5421F2"))
+        AccountId::from(hex!("57D650279B0EC63277430868bcA32B31eCf323Dc"))
     }
 
     pub(super) fn johan() -> AccountId {
-        AccountId::from(hex!("3bc92E5C6637aC3a2F98c103967cDBB44586D1D4"))
+        AccountId::from(hex!("795dF05777CCD03e0B568a4C5aed366e231D0c8E"))
     }
 
     pub(super) fn ronaldo() -> AccountId {
-        AccountId::from(hex!("30ceFB3383dBDAd376d2036CabeaA7d6BedD883F"))
+        AccountId::from(hex!("1a36b1ef5AA7439e11CF6A07581ABE473A59B572"))
     }
 
     pub(super) fn zinedine() -> AccountId {
-        AccountId::from(hex!("004D1B6AbBf790d69a498531760E1219a67D009c"))
+        AccountId::from(hex!("2c0c3C3A85B0F5cf59b5c290033bAe866e5228c4"))
     }
 
     pub(super) fn cristiano() -> AccountId {
-        AccountId::from(hex!("681547651C2e060444E718cc55b9bB6b1f780a3F"))
+        AccountId::from(hex!("ae3043bCF47658F266258415363D745FAE009Fb4"))
     }
 
     pub(super) fn michel() -> AccountId {
-        AccountId::from(hex!("97F10eE955879f3EddeE3368365d0fCC5c816652"))
+        AccountId::from(hex!("C36821F9F66893c683349007B0d82f03948BebC6"))
     }
 
     pub(super) fn roberto() -> AccountId {
-        AccountId::from(hex!("8ec8036d2746f635A32164f9e6C8c3f654d8Ab42"))
+        AccountId::from(hex!("368f9d1D4f3b1EF461dD68F0458D57B32DF4e639"))
     }
 
     pub(super) fn diego_session_keys() -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
         (
-            AccountId::from(hex!("FFa4645462F429E8FB9a6534E22f9f4f75094aB4")), // stash
+            AccountId::from(hex!("60dD15D650881EFbDDc7687E53Cca8C59918F7dE")), // stash
             diego(),
             sp_core::sr25519::Public::from_raw(hex!(
-                "562cd8c70c00ec3a3a031f5c9885978dd03a3a4fdb27bcf126887a9da11ff405"
+                "46c4b1db570721a9a63b15d64a18079a22a07359904197d3dc495cadf6f4f819"
             ))
             .into(),
             sp_core::ed25519::Public::from_raw(hex!(
-                "ffe39c882d4ec6800a7501e1ccf3193b1f4d789d599d37f03db7f92bffb26471"
+                "184421c2c8895ca3e2c153bfe05197235addfa1f29c885f00d517c00ae6a97cd"
             ))
             .into(),
             sp_core::sr25519::Public::from_raw(hex!(
-                "76bb986cb29126a2d7848317cd1dcbdbdd743bf69c0daf673674dbed19b70e4d"
+                "46c4b1db570721a9a63b15d64a18079a22a07359904197d3dc495cadf6f4f819"
             ))
             .into(),
         )
@@ -345,18 +345,18 @@ mod testnet_keys {
 
     pub(super) fn pele_session_keys() -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
         (
-            AccountId::from(hex!("55DE108cb01Acf946A0ddE3C40D5EdE3AE9201C1")), // stash
+            AccountId::from(hex!("a5af63F5c55f107100968F7061466148FBdFFB73")), // stash
             pele(),
             sp_core::sr25519::Public::from_raw(hex!(
-                "84bb180709195c3f12bc22e16fb971a0369ebd45b6b8334f6f03d50aa986c213"
+                "f21ebebfb3dc7410f49616e33e30e0f3cecd77229e6948c1a37298dc9f69bd74"
             ))
             .into(),
             sp_core::ed25519::Public::from_raw(hex!(
-                "16ec13de87e30ee2eb9be5874558a9a82a39d2707d3ab67670c5e94bb64646ac"
+                "3fd3328b86cdd20c83741e43840dd2255b7b4533d29939695a02f5cbbbae89a4"
             ))
             .into(),
             sp_core::sr25519::Public::from_raw(hex!(
-                "30a332f8874e0f7a66770917b27aba5fc5ca25f81c31332baaf5f1e897e4b404"
+                "f21ebebfb3dc7410f49616e33e30e0f3cecd77229e6948c1a37298dc9f69bd74"
             ))
             .into(),
         )
@@ -364,18 +364,18 @@ mod testnet_keys {
 
     pub(super) fn franz_session_keys() -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
         (
-            AccountId::from(hex!("F87EfACD0e08cF7F6667B2a8BEc9fC3a2DB1572F")), // stash
+            AccountId::from(hex!("2Ad92a54f35c1f1C557ED818dA4F3BF25c9A1C32")), // stash
             franz(),
             sp_core::sr25519::Public::from_raw(hex!(
-                "22c09973a99e38bcf899411fac369257bd8971eddc167e718b1a9014279a2415"
+                "08c6047923ddfbafa2f6a42b20132456f6e9afb01552441b0fc13e35f799dc1a"
             ))
             .into(),
             sp_core::ed25519::Public::from_raw(hex!(
-                "e73dc222fb879f67add8aeedf30156a47fd8740d02432e3db5d4ebe8c78f1b87"
+                "6064c973e8353e0064b00e9b21c7aedabc2b410792d020cbd1483b0ef48c9f06"
             ))
             .into(),
             sp_core::sr25519::Public::from_raw(hex!(
-                "44bea1479765faa200b5ee7b37ac00795891ff97fd629c2676c481bbb6e27f61"
+                "08c6047923ddfbafa2f6a42b20132456f6e9afb01552441b0fc13e35f799dc1a"
             ))
             .into(),
         )
@@ -406,8 +406,8 @@ where
 /// Generate authority keys
 pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
     (
-        get_account_id_from_seed::<ecdsa::Public>(&format!("{}//stash", s)),
-        get_account_id_from_seed::<ecdsa::Public>(s),
+        AccountId::from(hex!("487d29457e604aa45c35778Af0d76fCCaC195822")),   // Alice//stash
+        AccountId::from(hex!("8097c3C354652CB1EEed3E5B65fBa2576470678A")),   // Alice
         get_from_seed::<BabeId>(s),
         get_from_seed::<GrandpaId>(s),
         get_from_seed::<ImOnlineId>(s),
