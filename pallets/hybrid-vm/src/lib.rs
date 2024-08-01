@@ -23,13 +23,13 @@ mod tests;
 mod interoperate;
 
 use self::interoperate::InterCall;
-use ethereum::TransactionV2 as Transaction;
 use frame_support::traits::{tokens::fungible::Inspect, Currency, Get};
 use frame_support::RuntimeDebugNoBound;
 use pallet_contracts::chain_extension::{Environment, Ext, InitState, RetVal};
 use sp_core::{H160, U256};
 use sp_runtime::{AccountId32, DispatchError};
 use sp_std::vec::Vec;
+use sp_std::vec;
 //use sp_std::fmt::Debug;
 use hp_system::{AccountId32Mapping, AccountIdMapping, U256BalanceMapping};
 

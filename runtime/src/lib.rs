@@ -13,9 +13,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 // Imports
 use parity_scale_codec::{Decode, Encode};
+use byte_slice_cast::AsByteSlice;
 use sp_api::impl_runtime_apis;
 use sp_core::{
-    crypto::{ByteArray, KeyTypeId},
+    crypto::{ByteArray, KeyTypeId, AccountId32},
     OpaqueMetadata, H160, H256, U256,
 };
 use sp_runtime::{
@@ -90,6 +91,7 @@ pub use frame_system::{limits::BlockWeights, Call as SystemCall, EnsureRoot, Ens
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::Multiplier;
+use hp_system::{AccountId32Mapping, AccountIdMapping, U256BalanceMapping};
 
 #[cfg(any(feature = "std", test))]
 pub use pallet_staking::StakerStatus;
@@ -1260,6 +1262,61 @@ impl pallet_template::Config for Runtime {
     type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
+pub struct GasPrice;
+impl Get<Option<U256>> for GasPrice {
+    fn get() -> Option<U256> {
+        Some(U256::from(100_000_000_000u64))
+    }
+}
+
+parameter_types! {
+	pub const EnableCallEVM: bool = true;
+	pub const EnableCallWasmVM: bool = true;
+	pub const GasLimit: u64 = 10_000_000u64;
+}
+
+impl U256BalanceMapping for Runtime {
+    type Balance = Balance;
+    fn u256_to_balance(value: U256) -> Result<Self::Balance, &'static str> {
+        Self::Balance::try_from(value)
+    }
+}
+
+impl AccountIdMapping<Runtime> for Runtime {
+    fn into_address(account_id: <Runtime as frame_system::Config>::AccountId) -> H160 {
+        let mut address_arr = [0u8; 32];
+        address_arr[0..32].copy_from_slice(account_id.as_byte_slice());
+
+        H160::from_slice(&address_arr[0..20])
+    }
+}
+
+impl AccountId32Mapping<Runtime> for Runtime {
+    fn id32_to_id(id32: AccountId32) -> <Runtime as frame_system::Config>::AccountId {
+        id32.into()
+    }
+
+    fn id_to_id32(account_id: <Runtime as frame_system::Config>::AccountId) -> AccountId32 {
+        let mut result = [0u8; 32];
+        result[..20].copy_from_slice(&account_id.0);
+        result[20..32].copy_from_slice(&[0u8; 12]);
+
+        AccountId32::new(result)
+    }
+}
+
+impl pallet_hybrid_vm::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type U256BalanceMapping = Self;
+    type AccountIdMapping = Self;
+    type AccountId32Mapping = Self;
+    type EnableCallEVM = EnableCallEVM;
+    type EnableCallWasmVM = EnableCallWasmVM;
+    type GasLimit = GasLimit;
+    type GasPrice = GasPrice;
+}
+
 // Construct runtime
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -1305,6 +1362,7 @@ construct_runtime!(
         Contracts: pallet_contracts,
 
         TemplateModule: pallet_template,
+        HybridVM: pallet_hybrid_vm,
     }
 );
 

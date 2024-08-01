@@ -53,7 +53,7 @@ pallet-transaction-payment = { workspace = true, default-features = false}
 
 pallet-evm-precompile-simple = { workspace = true, default-features = false}
 
-ink_env = { workspace = true }
+ink_env = { workspace = true, default-features = false }
 
 pallet-evm-precompile-call-hybrid-vm = { workspace = true }
 

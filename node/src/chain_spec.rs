@@ -442,15 +442,15 @@ where
 }
 
 /// Generate authority keys
-pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
-    (
-        AccountId::from(hex!("487d29457e604aa45c35778Af0d76fCCaC195822")),   // Alice//stash
-        AccountId::from(hex!("8097c3C354652CB1EEed3E5B65fBa2576470678A")),   // Alice
-        get_from_seed::<BabeId>(s),
-        get_from_seed::<GrandpaId>(s),
-        get_from_seed::<ImOnlineId>(s),
-    )
-}
+// pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
+//     (
+//         AccountId::from(hex!("487d29457e604aa45c35778Af0d76fCCaC195822")),   // Alice//stash
+//         AccountId::from(hex!("8097c3C354652CB1EEed3E5B65fBa2576470678A")),   // Alice
+//         get_from_seed::<BabeId>(s),
+//         get_from_seed::<GrandpaId>(s),
+//         get_from_seed::<ImOnlineId>(s),
+//     )
+// }
 
 // Chain properties
 fn properties() -> Properties {
