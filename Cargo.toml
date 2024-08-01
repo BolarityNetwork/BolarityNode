@@ -2,7 +2,9 @@
 members = [
     "node",
     "runtime",
-    "pallets/*",
+    "pallets/template",
+    "pallets/evm-precompile/call-hybrid-vm",
+    "hybridvm/primitives/system",
 ]
 resolver = "2"
 
@@ -191,6 +193,9 @@ ark-bw6-761 = { version = "0.4.0", default-features = false }
 ark-ec = { version = "0.4.0", default-features = false }
 ark-ff = { version = "0.4.0", default-features = false }
 ark-std = { version = "0.4.0", default-features = false }
+
+# Local Pallet
+hp-system = { path = "hybridvm/primitives/system", default-features = false }
 
 [profile.release]
 # Substrate runtime requires unwinding.
