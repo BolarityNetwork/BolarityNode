@@ -5,6 +5,7 @@ members = [
     "pallets/template",
     "pallets/evm-precompile/call-hybrid-vm",
     "pallets/hybrid-vm",
+    "pallets/hybrid-vm-port",
     "hybridvm/primitives/system",
 ]
 resolver = "2"
@@ -146,7 +147,7 @@ pallet-staking-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk
 pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
-pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
@@ -208,7 +209,7 @@ ink_env = { git = "https://github.com/paritytech/ink", default-features = false 
 # Local Pallet
 bolarity-runtime = { path = "runtime", default-features = false }
 hp-system = { path = "hybridvm/primitives/system", default-features = false }
-pallet-evm-precompile-call-hybrid-vm = { path = "pallets/evm-precompile/call-hybrid-vm" }
+pallet-evm-precompile-call-hybrid-vm = { path = "pallets/evm-precompile/call-hybrid-vm", default-features = false }
 pallet-hybrid-vm = { path = "pallets/hybrid-vm", default-features = false }
 
 [profile.release]

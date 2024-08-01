@@ -55,7 +55,7 @@ pallet-evm-precompile-simple = { workspace = true, default-features = false}
 
 ink_env = { workspace = true, default-features = false }
 
-pallet-evm-precompile-call-hybrid-vm = { workspace = true }
+pallet-evm-precompile-call-hybrid-vm = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
