@@ -81,6 +81,7 @@ use pallet_contracts::chain_extension::SysConfig;
 use pallet_contracts::{CollectEvents, DebugInfo, Determinism};
 use pallet_evm::{AddressMapping, BlockHashMapping, FeeCalculator, GasWeightMapping, Runner};
 use pallet_hybrid_vm::UnifiedAddress;
+use alloc::{string::String, boxed::Box};
 
 fn str2s(s: String) -> &'static str {
 	Box::leak(s.into_boxed_str())

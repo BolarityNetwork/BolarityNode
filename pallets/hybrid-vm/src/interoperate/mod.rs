@@ -17,7 +17,7 @@
 // Only support EVM  contracts which its parameter data max value below 128bit for the time being
 // Modified by Alex Wang
 
-#![cfg_attr(not(feature = "std"), no_std)]
+// #![cfg_attr(not(feature = "std"), no_std)]
 
 pub extern crate alloc;
 

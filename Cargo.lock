@@ -1052,6 +1052,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-hotfix-sufficients",
  "pallet-hybrid-vm",
+ "pallet-hybrid-vm-port",
  "pallet-im-online",
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",

@@ -12,14 +12,14 @@ targets = ["x86_64-unknown-linux-gnu"]
 blake2-rfc = { workspace = true, default-features = false }
 byte-slice-cast= { workspace = true, default-features = false }
 parity-scale-codec = { workspace = true, features = ["derive"], default-features = false }
-ethereum = { workspace = true, features = ["with-codec"] }
-getrandom = { workspace = true, features = ["js"] }
+ethereum = { workspace = true, features = ["with-codec"], default-features = false }
+getrandom = { workspace = true, features = ["js"], default-features = false }
 hex = { workspace = true, default-features = false, features = ['alloc'] }
 lite-json = { workspace = true, default-features = false }
 log = { workspace = true, default-features = false }
 scale-info = { workspace = true, default-features = false, features = ["derive", "serde"] }
 serde = { workspace = true, default-features = false, features = ['derive'] }
-serde_json = { workspace = true, features = ['alloc'] }
+serde_json = { workspace = true, features = ['alloc'], default-features = false }
 sha3 = { workspace = true, default-features = false }
 
 # Substrate
@@ -40,11 +40,11 @@ fp-evm = { workspace = true, default-features = false}
 hp-system = { workspace = true, default-features = false }
 
 [dev-dependencies]
-assert_matches = { workspace = true }
-hex-literal = { workspace = true }
-paste = { workspace = true }
-pretty_assertions = { workspace = true }
-wat = { workspace = true }
+assert_matches = { workspace = true, default-features = false }
+hex-literal = { workspace = true, default-features = false }
+paste = { workspace = true, default-features = false }
+pretty_assertions = { workspace = true, default-features = false }
+wat = { workspace = true, default-features = false }
 
 pallet-balances = { workspace = true, default-features = false}
 pallet-insecure-randomness-collective-flip = { workspace = true, default-features = false}
@@ -64,6 +64,7 @@ std = [
 	"ethereum/std",
 	"frame-support/std",
 	"frame-system/std",
+	"ink_env/std",
 	"serde/std",
 	"lite-json/std",
 	"hex/std",
