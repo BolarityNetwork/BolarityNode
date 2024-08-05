@@ -287,15 +287,15 @@ mod devnet_keys {
             sp_core::sr25519::Public::from_raw(hex!(
                 "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
             ))
-                .into(),
+            .into(),
             sp_core::ed25519::Public::from_raw(hex!(
                 "88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee"
             ))
-                .into(),
+            .into(),
             sp_core::sr25519::Public::from_raw(hex!(
                 "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
             ))
-                .into(),
+            .into(),
         )
     }
 
@@ -306,15 +306,15 @@ mod devnet_keys {
             sp_core::sr25519::Public::from_raw(hex!(
                 "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
             ))
-                .into(),
+            .into(),
             sp_core::ed25519::Public::from_raw(hex!(
                 "d17c2d7823ebf260fd138f2d7e27d114c0145d968b5ff5006125f2414fadae69"
             ))
-                .into(),
+            .into(),
             sp_core::sr25519::Public::from_raw(hex!(
                 "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
             ))
-                .into(),
+            .into(),
         )
     }
 }
@@ -444,8 +444,8 @@ where
 /// Generate authority keys
 pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
     (
-        AccountId::from(hex!("487d29457e604aa45c35778Af0d76fCCaC195822")),   // Alice//stash
-        AccountId::from(hex!("8097c3C354652CB1EEed3E5B65fBa2576470678A")),   // Alice
+        AccountId::from(hex!("487d29457e604aa45c35778Af0d76fCCaC195822")), // Alice//stash
+        AccountId::from(hex!("8097c3C354652CB1EEed3E5B65fBa2576470678A")), // Alice
         get_from_seed::<BabeId>(s),
         get_from_seed::<GrandpaId>(s),
         get_from_seed::<ImOnlineId>(s),
