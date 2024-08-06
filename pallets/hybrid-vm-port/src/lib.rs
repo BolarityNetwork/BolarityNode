@@ -36,7 +36,7 @@ mod mock;
 #[cfg(all(feature = "std", test))]
 mod tests;
 
-use alloc::{vec, vec::Vec};
+use alloc::{vec, vec::Vec, string::{String, ToString}, boxed::Box};
 use core::marker::PhantomData;
 pub use ethereum::{
 	AccessListItem, BlockV2 as Block, LegacyTransactionMessage, Log, ReceiptV3 as Receipt,

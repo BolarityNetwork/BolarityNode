@@ -211,6 +211,7 @@ bolarity-runtime = { path = "runtime", default-features = false }
 hp-system = { path = "hybridvm/primitives/system", default-features = false }
 pallet-evm-precompile-call-hybrid-vm = { path = "pallets/evm-precompile/call-hybrid-vm", default-features = false }
 pallet-hybrid-vm = { path = "pallets/hybrid-vm", default-features = false }
+pallet-hybrid-vm-port = { path = "pallets/hybrid-vm-port", default-features = false }
 
 [profile.release]
 # Substrate runtime requires unwinding.

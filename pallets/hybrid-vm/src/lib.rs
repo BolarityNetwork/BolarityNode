@@ -37,6 +37,7 @@ pub use self::pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use fp_account::AccountId20;
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
@@ -139,7 +140,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T>
 	where
-		T::AccountId: From<AccountId32> + Into<AccountId32>,
+		T::AccountId: From<AccountId32> + Into<AccountId20>,
 	{
 		pub fn call_wasm_vm(
 			origin: OriginFor<T>,
