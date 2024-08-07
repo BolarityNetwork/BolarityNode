@@ -5,6 +5,8 @@ authors = ["Parity Technologies <admin@parity.io> and modified by HybridVM"]
 edition = "2021"
 
 [dependencies]
+derive_more = { version = "0.99.17", features = ["from", "display"] }
+
 ink_primitives = { version = "5.0.0", git = "https://github.com/paritytech/ink", default-features = false }
 ink_metadata = { version = "5.0.0", git = "https://github.com/paritytech/ink", default-features = false, features = ["derive"], optional = true }
 ink_env = { version = "5.0.0", git = "https://github.com/paritytech/ink", default-features = false }
