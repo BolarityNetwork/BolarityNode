@@ -17,16 +17,441 @@
 // limitations under the License.
 
 // Modified by Alex Wang
+#![recursion_limit = "256"]
 
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
-use ink_env::Environment;
+use scale_info::{build, MetaType, Path, Type, TypeInfo};
+use ink_env::{Environment};
+use ink_metadata::layout::{Layout, LayoutKey, LeafLayout};
 use ink_prelude::string::String;
+// use scale_info::TypeInfo;
 use sp_core::H160;
 use ink_prelude::vec::Vec;
-//use sp_std::vec::Vec;
+use ink_primitives::Key;
+use ink_storage::traits::StorageLayout;
+use scale_encode::{EncodeAsType};
+use scale_decode::{visitor, DecodeAsType, IntoVisitor, Visitor, Error};
+use scale::{Encode, Decode, MaxEncodedLen};
+use scale_decode::error::ErrorKind::WrongLength;
+use scale_decode::visitor::{DecodeAsTypeResult, DecodeError, TypeIdFor, Unexpected};
+use scale_type_resolver::TypeResolver;
+// use ink_metadata::TypeInfo as InkTypeInfo;
 
-type AccountId = <ink_env::DefaultEnvironment as Environment>::AccountId;
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Default, Hash, Debug)]
+#[derive(Encode, Decode, MaxEncodedLen)]
+pub struct AccountId20(pub [u8; 20]);
+
+#[cfg(feature = "serde")]
+impl_serde::impl_fixed_hash_serde!(AccountId20, 20);
+
+impl StorageLayout for AccountId20 {
+    fn layout(key: &u32) -> Layout {
+        Layout::Leaf(LeafLayout::from_key::<AccountId20>(LayoutKey::from(key)))
+    }
+}
+
+impl EncodeAsType for AccountId20 {
+    fn encode_as_type_to<R: TypeResolver>(
+        &self,
+        _type_id: &R::TypeId,
+        _types: &R,
+        out: &mut Vec<u8>,
+    ) -> Result<(), scale_encode::Error> {
+        out.extend_from_slice(&self.0);
+        Ok(())
+    }
+}
+
+impl TypeInfo for AccountId20 {
+    type Identity = Self;
+
+    fn type_info() -> Type {
+        Type::builder()
+            .path(Path::new("AccountId20", "my_crate::path"))
+            .composite(
+                build::Fields::unnamed()
+                    .field(|f| f.ty::<[u8; 20]>())
+            )
+    }
+}
+
+
+pub struct AccountId20Visitor<R: TypeResolver> {
+    _marker: std::marker::PhantomData<R>,
+}
+
+impl<R: TypeResolver> AccountId20Visitor<R> {
+    pub fn new() -> Self {
+        Self {
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+
+impl<'scale, 'resolver, R: TypeResolver> Visitor for AccountId20Visitor<R> {
+    type Value<'s, 'r> = AccountId20;
+    type Error = scale_decode::Error;
+    type TypeResolver = R;
+
+    fn unchecked_decode_as_type<'s, 'r>(
+        self,
+        input: &mut &'s [u8],
+        _type_id: &TypeIdFor<Self>,
+        _types: &'r Self::TypeResolver,
+    ) -> DecodeAsTypeResult<Self, Result<Self::Value<'s, 'r>, Self::Error>> {
+        let mut array = [0u8; 20];
+        if input.len() < 20 {
+            return DecodeAsTypeResult::Decoded(Err(Error::new(WrongLength{expected_len: 20, actual_len: input.len()})));
+        }
+        array.copy_from_slice(&input[..20]);
+        *input = &input[20..];
+        DecodeAsTypeResult::Decoded(Ok(AccountId20(array)))
+    }
+
+    fn visit_unexpected<'s, 'r>(
+        self,
+        unexpected: Unexpected,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        Err(DecodeError::Unexpected(unexpected).into())
+    }
+
+    fn visit_bool<'s, 'r>(
+        self,
+        _value: bool,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Bool)
+    }
+
+    fn visit_char<'s, 'r>(
+        self,
+        _value: char,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Char)
+    }
+
+    fn visit_u8<'s, 'r>(
+        self,
+        _value: u8,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::U8)
+    }
+
+    fn visit_u16<'s, 'r>(
+        self,
+        _value: u16,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::U16)
+    }
+
+    fn visit_u32<'s, 'r>(
+        self,
+        _value: u32,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::U32)
+    }
+
+    fn visit_u64<'s, 'r>(
+        self,
+        _value: u64,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::U64)
+    }
+
+    fn visit_u128<'s, 'r>(
+        self,
+        _value: u128,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::U128)
+    }
+
+    fn visit_u256<'s, 'r>(
+        self,
+        _value: &'s [u8; 32],
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::U256)
+    }
+
+    fn visit_i8<'s, 'r>(
+        self,
+        _value: i8,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::I8)
+    }
+
+    fn visit_i16<'s, 'r>(
+        self,
+        _value: i16,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::I16)
+    }
+
+    fn visit_i32<'s, 'r>(
+        self,
+        _value: i32,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::I32)
+    }
+
+    fn visit_i64<'s, 'r>(
+        self,
+        _value: i64,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::I64)
+    }
+
+    fn visit_i128<'s, 'r>(
+        self,
+        _value: i128,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::I128)
+    }
+
+    fn visit_i256<'s, 'r>(
+        self,
+        _value: &'s [u8; 32],
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::I256)
+    }
+
+    fn visit_sequence<'s, 'r>(
+        self,
+        _value: &mut scale_decode::visitor::types::Sequence<'s, 'r, Self::TypeResolver>,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Sequence)
+    }
+
+    fn visit_composite<'s, 'r>(
+        self,
+        _value: &mut scale_decode::visitor::types::Composite<'s, 'r, Self::TypeResolver>,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Composite)
+    }
+
+    fn visit_tuple<'s, 'r>(
+        self,
+        _value: &mut scale_decode::visitor::types::Tuple<'s, 'r, Self::TypeResolver>,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Tuple)
+    }
+
+    fn visit_str<'s, 'r>(
+        self,
+        _value: &mut scale_decode::visitor::types::Str<'s>,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Str)
+    }
+
+    fn visit_variant<'s, 'r>(
+        self,
+        _value: &mut scale_decode::visitor::types::Variant<'s, 'r, Self::TypeResolver>,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Variant)
+    }
+
+    fn visit_array<'s, 'r>(
+        self,
+        _value: &mut scale_decode::visitor::types::Array<'s, 'r, Self::TypeResolver>,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Array)
+    }
+
+    fn visit_bitsequence<'s, 'r>(
+        self,
+        _value: &mut scale_decode::visitor::types::BitSequence<'s>,
+        _type_id: &TypeIdFor<Self>,
+    ) -> Result<Self::Value<'s, 'r>, Self::Error> {
+        self.visit_unexpected(Unexpected::Bitsequence)
+    }
+}
+
+impl IntoVisitor for AccountId20 {
+    type AnyVisitor<R: TypeResolver> = AccountId20Visitor<R>;
+
+    fn into_visitor<R: TypeResolver>() -> Self::AnyVisitor<R> {
+        AccountId20Visitor::new()
+    }
+}
+
+// impl DecodeAsType for AccountId20 {
+//     fn decode_as_type<R: TypeResolver>(
+//         input: &mut &[u8],
+//         type_id: &R::TypeId,
+//         types: &R,
+//     ) -> Result<Self, scale_decode::Error> {
+//         Self::decode_as_type_maybe_compact(input, type_id, types, false)
+//     }
+//
+//     fn decode_as_type_maybe_compact<R: TypeResolver>(
+//         input: &mut &[u8],
+//         _type_id: &R::TypeId,
+//         _types: &R,
+//         _is_compact: bool,
+//     ) -> Result<Self, scale_decode::Error> {
+//         let mut array = [0u8; 20];
+//         if input.len() < 20 {
+//             return Err(scale_decode::Error::custom_str("Invalid length for AccountId20"));
+//         }
+//         array.copy_from_slice(&input[..20]);
+//         *input = &input[20..];
+//         Ok(AccountId20(array))
+//     }
+// }
+
+
+// impl core::str::FromStr for AccountId20 {
+//     type Err = &'static str;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         H160::from_str(s)
+//             .map(Into::into)
+//             .map_err(|_| "invalid hex address.")
+//     }
+// }
+//
+// impl fmt::Display for AccountId20 {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         let address = hex::encode(self.0).trim_start_matches("0x").to_lowercase();
+//         let address_hash = hex::encode(keccak_256(address.as_bytes()));
+//
+//         let checksum: String =
+//             address
+//                 .char_indices()
+//                 .fold(String::from("0x"), |mut acc, (index, address_char)| {
+//                     let n = u16::from_str_radix(&address_hash[index..index + 1], 16)
+//                         .expect("Keccak256 hashed; qed");
+//
+//                     if n > 7 {
+//                         // make char uppercase if ith character is 9..f
+//                         acc.push_str(&address_char.to_uppercase().to_string())
+//                     } else {
+//                         // already lowercased
+//                         acc.push(address_char)
+//                     }
+//
+//                     acc
+//                 });
+//         write!(f, "{checksum}")
+//     }
+// }
+//
+// impl fmt::Debug for AccountId20 {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(f, "{:?}", H160(self.0))
+//     }
+// }
+//
+// impl From<[u8; 20]> for AccountId20 {
+//     fn from(bytes: [u8; 20]) -> Self {
+//         Self(bytes)
+//     }
+// }
+//
+// impl<'a> TryFrom<&'a [u8]> for AccountId20 {
+//     type Error = ();
+//     fn try_from(x: &'a [u8]) -> Result<AccountId20, ()> {
+//         if x.len() == 20 {
+//             let mut data = [0; 20];
+//             data.copy_from_slice(x);
+//             Ok(AccountId20(data))
+//         } else {
+//             Err(())
+//         }
+//     }
+// }
+//
+// impl From<AccountId20> for [u8; 20] {
+//     fn from(val: AccountId20) -> Self {
+//         val.0
+//     }
+// }
+//
+// impl From<H160> for AccountId20 {
+//     fn from(h160: H160) -> Self {
+//         Self(h160.0)
+//     }
+// }
+//
+// impl From<AccountId20> for H160 {
+//     fn from(val: AccountId20) -> Self {
+//         H160(val.0)
+//     }
+// }
+
+impl AsRef<[u8]> for AccountId20 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0[..]
+    }
+}
+
+impl AsMut<[u8]> for AccountId20 {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0[..]
+    }
+}
+
+impl AsRef<[u8; 20]> for AccountId20 {
+    fn as_ref(&self) -> &[u8; 20] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8; 20]> for AccountId20 {
+    fn as_mut(&mut self) -> &mut [u8; 20] {
+        &mut self.0
+    }
+}
+
+// impl From<ecdsa::Public> for AccountId20 {
+//     fn from(pk: ecdsa::Public) -> Self {
+//         let decompressed = libsecp256k1::PublicKey::parse_compressed(&pk.0)
+//             .expect("Wrong compressed public key provided")
+//             .serialize();
+//         let mut m = [0u8; 64];
+//         m.copy_from_slice(&decompressed[1..65]);
+//         let account = H160::from(H256::from(keccak_256(&m)));
+//         Self(account.into())
+//     }
+// }
+
+impl From<[u8; 32]> for AccountId20 {
+    fn from(bytes: [u8; 32]) -> Self {
+        let mut buffer = [0u8; 20];
+        buffer.copy_from_slice(&bytes[..20]);
+        Self(buffer)
+    }
+}
+
+// impl From<AccountId32> for AccountId20 {
+//     fn from(account: AccountId32) -> Self {
+//         let bytes: &[u8; 32] = account.as_ref();
+//         Self::from(*bytes)
+//     }
+// }
+
+type AccountId = AccountId20;
+
 #[ink::chain_extension( extension = 0 )]
 pub trait MyChainExtension {
         type ErrorCode = i32;
@@ -46,7 +471,7 @@ impl Environment for CustomEnvironment {
     const MAX_EVENT_TOPICS: usize =
         <ink_env::DefaultEnvironment as Environment>::MAX_EVENT_TOPICS;
 
-    type AccountId = <ink_env::DefaultEnvironment as Environment>::AccountId;
+    type AccountId = AccountId;
     type Balance = <ink_env::DefaultEnvironment as Environment>::Balance;
     type Hash = <ink_env::DefaultEnvironment as Environment>::Hash;
     type BlockNumber = <ink_env::DefaultEnvironment as Environment>::BlockNumber;
@@ -55,8 +480,6 @@ impl Environment for CustomEnvironment {
 
     type ChainExtension = MyChainExtension;
 }
-
-
 
 #[ink::contract(env = crate::CustomEnvironment)]
 mod erc20 {

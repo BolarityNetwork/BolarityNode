@@ -8,6 +8,7 @@ members = [
     "pallets/hybrid-vm-port",
     "hybridvm/primitives/system",
 ]
+exclude = ["hybridvm/external/contract/src/erc20wasm"]
 resolver = "2"
 
 [workspace.package]
