@@ -450,7 +450,7 @@ fn test_evm_call_wasm() {
 
 		//5.  Call EVM contract to call wasm contract transfer wasm token to bob,  the last bytes32 is the wasm contract accountid
 		let evm_call_wasm_selector =
-			&Keccak256::digest(b"evmCallWasm(bytes32,uint256,bytes32)")[0..4];
+			&Keccak256::digest(b"evmCallWasm(bytes20,uint256,bytes32)")[0..4];
 
 		let transfer_value: u128 = 12000000000000000000;
 
