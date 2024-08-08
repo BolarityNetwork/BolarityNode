@@ -108,7 +108,6 @@ fn test_wasm_call_evm() {
 	let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
 	let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
 	let ALICE_SHADOW = AccountId20::from(A_SHADOW);
-	println!("ALICE_SHADOW: {:?}", ALICE_SHADOW);
 	let BOB_SHADOW = AccountId20::from(B_SHADOW);
 
 	ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
@@ -134,399 +133,398 @@ fn test_wasm_call_evm() {
 			vec![],
 		);
 
-		match creation {
-			Ok(_) => println!("Contract instantiated successfully"),
-			Err(err) => {
-				println!("Contract instantiation failed: {:?}", err);
-				panic!("Expected Ok(_). Got Err: {:?}", err);
-			}
+		assert_ok!(creation);
+		let wasm_addr =
+			Contracts::contract_address(&ALICE_SHADOW, &wasm_code_hash, &new_call.encode(), &[]);
+
+		//assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
+
+		//3. Create EVM contract  and tranfer to bob token
+		let source = H160::from(ALICE_SHADOW);
+
+		let creation4evm = <Test as pallet_evm::Config>::Runner::create(
+			source,
+			evm,
+			U256::default(),
+			GAS_LIMIT,
+			Some(U256::from(100_000_000_000u64)),
+			None,
+			Some(U256::from(0)),
+			Vec::new(),
+			true,
+			true,
+			None,
+			None,
+			<Test as pallet_evm::Config>::config(),
+		);
+
+		assert_ok!(&creation4evm);
+
+		let evm_addr: H160;
+
+		match creation4evm.unwrap() {
+			CreateInfo { exit_reason: ExitReason::Succeed(_), value: create_address, .. } => {
+				evm_addr = create_address;
+			},
+			CreateInfo { exit_reason: reason, value: _, .. } => {
+				panic!("Create EVM Contract failed!({:?})", reason);
+			},
 		}
-	})
+
+		//3.1 Alice tranfer token to  Bob
+		let transfer_selector = &Keccak256::digest(b"transfer(address,uint256)")[0..4];
+
+		let source_bob = H160::from(BOB_SHADOW);
+		let token: u128 = 1_883_000_000_000_000_000;
+
+		let fun_para: [u8; 20] = source_bob.into();
+		let transfer_input =
+			[&transfer_selector[..], &[0u8; 12], &fun_para, &[0u8; 16], &token.to_be_bytes()]
+				.concat();
+
+		let call4evm = <Test as pallet_evm::Config>::Runner::call(
+			source,
+			evm_addr,
+			transfer_input.clone(),
+			U256::default(),
+			GAS_LIMIT,
+			Some(U256::from(100_000_000_000u64)),
+			None,
+			Some(U256::from(1)),
+			Vec::new(),
+			true,
+			true,
+			None,
+			None,
+			<Test as pallet_evm::Config>::config(),
+		);
+
+		assert_ok!(&call4evm);
+
+
+		let transfer_result: u128;
+
+		match call4evm.unwrap() {
+			CallInfo { exit_reason: ExitReason::Succeed(_), value: return_value, .. } => {
+				let mut a: [u8; 16] = Default::default();
+				a.copy_from_slice(&return_value[16..32]);
+				transfer_result = u128::from_be_bytes(a);
+			},
+			CallInfo { exit_reason: reason, value: _, .. } => {
+				panic!("Call EVM Contract balanceOf failed!({:?})", reason);
+			},
+		};
+		println!("Alice transfer to Bob token:{}", transfer_result);
+
+
+		//4. Get BOB_SHADOW balance of EVM token
+		let balance_of_selector = &Keccak256::digest(b"balanceOf(address)")[0..4];
+
+		let source_bob = H160::from(BOB_SHADOW);
+
+		let fun_para: [u8; 20] = source_bob.into();
+		let balance_of_input = [&balance_of_selector[..], &[0u8; 12], &fun_para].concat();
+
+		let call4evm = <Test as pallet_evm::Config>::Runner::call(
+			source_bob,
+			evm_addr,
+			balance_of_input.clone(),
+			U256::default(),
+			GAS_LIMIT,
+			Some(U256::from(100_000_000_000u64)),
+			None,
+			Some(U256::from(0)),
+			Vec::new(),
+			true,
+			true,
+			None,
+			None,
+			<Test as pallet_evm::Config>::config(),
+		);
+
+		assert_ok!(&call4evm);
+
+		let bob_balance_before: u128;
+
+		match call4evm.unwrap() {
+			CallInfo { exit_reason: ExitReason::Succeed(_), value: return_value, .. } => {
+				let mut a: [u8; 16] = Default::default();
+				a.copy_from_slice(&return_value[16..32]);
+				bob_balance_before = u128::from_be_bytes(a);
+			},
+			CallInfo { exit_reason: reason, value: _, .. } => {
+				panic!("Call EVM Contract balanceOf failed!({:?})", reason);
+			},
+		};
+		println!("bob_balance_before={}", bob_balance_before);
+
+		//5.  Call wasm contract to call evm transfer evm token to bob.  H160: evm contract address, H160: bob's address  u128: value
+		let mut a: [u8; 4] = Default::default();
+		a.copy_from_slice(&BlakeTwo256::hash(b"wasmCallEvm")[0..4]);
+		let call = ExecutionInput::new(Selector::new(a));
+
+		let transfer_value: u128 = 12_000_000_000_000_000_000;
+
+		let call = call
+			.push_arg(format!("0x{:x}", evm_addr))
+			.push_arg(format!("0x{:x}", source_bob))
+			.push_arg(transfer_value);
+
+		let result = Contracts::bare_call(
+			ALICE_SHADOW,
+			wasm_addr,
+			0,
+			WEIGHT_LIMIT,
+			None,
+			Encode::encode(&call).to_vec(),
+			DebugInfo::Skip,
+			CollectEvents::Skip,
+			Determinism::Enforced,
+		)
+			.result
+			.unwrap();
+		assert!(!result.did_revert());
+		println!("Alice transfer to Bob from wasm_call_evm:{}", transfer_value);
+
+
+		//6. Get BOB_SHADOW balance of EVM token
+		let call4evm = <Test as pallet_evm::Config>::Runner::call(
+			source_bob,
+			evm_addr,
+			balance_of_input,
+			U256::default(),
+			GAS_LIMIT,
+			Some(U256::from(100_000_000_000u64)),
+			None,
+			Some(U256::from(1)),
+			Vec::new(),
+			true,
+			true,
+			None,
+			None,
+			<Test as pallet_evm::Config>::config(),
+		);
+
+		assert_ok!(&call4evm);
+
+		let bob_balance_after: u128;
+
+		match call4evm.unwrap() {
+			CallInfo { exit_reason: ExitReason::Succeed(_), value: return_value, .. } => {
+				let mut a: [u8; 16] = Default::default();
+				a.copy_from_slice(&return_value[16..32]);
+				bob_balance_after = u128::from_be_bytes(a);
+			},
+			CallInfo { exit_reason: reason, value: _, .. } => {
+				panic!("Call EVM Contract balanceOf failed!({:?})", reason);
+			},
+		};
+		println!("bob_balance_after={}", bob_balance_after);
+		//7. Test  the balance of BOB_SHADOW being correct
+		assert_eq!(bob_balance_after, bob_balance_before + transfer_value);
+	});
 }
 
-		// assert_ok!(creation);
-		// let wasm_addr =
-		// 	Contracts::contract_address(&ALICE_SHADOW, &wasm_code_hash, &new_call.encode(), &[]);
-		//
-		// //assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
-		//
-		// //3. Create EVM contract  and tranfer to bob token
-		// let source = H160::from(ALICE_SHADOW);
-		//
-		// let creation4evm = <Test as pallet_evm::Config>::Runner::create(
-		// 	source,
-		// 	evm,
-		// 	U256::default(),
-		// 	GAS_LIMIT,
-		// 	Some(U256::from(100_000_000_000u64)),
-		// 	None,
-		// 	Some(U256::from(0)),
-		// 	Vec::new(),
-		// 	true,
-		// 	true,
-		// 	None,
-		// 	None,
-		// 	<Test as pallet_evm::Config>::config(),
-		// );
-		//
-		// assert_ok!(&creation4evm);
-
-	// 	let evm_addr: H160;
-	//
-	// 	match creation4evm.unwrap() {
-	// 		CreateInfo { exit_reason: ExitReason::Succeed(_), value: create_address, .. } => {
-	// 			evm_addr = create_address;
-	// 		},
-	// 		CreateInfo { exit_reason: reason, value: _, .. } => {
-	// 			panic!("Create EVM Contract failed!({:?})", reason);
-	// 		},
-	// 	}
-	//
-	// 	//3.1 Alice tranfer token to  Bob
-	// 	let transfer_selector = &Keccak256::digest(b"transfer(address,uint256)")[0..4];
-	//
-	// 	let source_bob = H160::from(BOB_SHADOW);
-	// 	let token: u128 = 1_883_000_000_000_000_000;
-	//
-	// 	let fun_para: [u8; 20] = source_bob.into();
-	// 	let transfer_input =
-	// 		[&transfer_selector[..], &[0u8; 12], &fun_para, &[0u8; 16], &token.to_be_bytes()]
-	// 			.concat();
-	//
-	// 	let call4evm = <Test as pallet_evm::Config>::Runner::call(
-	// 		source,
-	// 		evm_addr,
-	// 		transfer_input.clone(),
-	// 		U256::default(),
-	// 		GAS_LIMIT,
-	// 		Some(U256::from(100_000_000_000u64)),
-	// 		None,
-	// 		Some(U256::from(1)),
-	// 		Vec::new(),
-	// 		true,
-	// 		true,
-	// 		None,
-	// 		None,
-	// 		<Test as pallet_evm::Config>::config(),
-	// 	);
-	//
-	// 	assert_ok!(&call4evm);
-	//
-	// 	let transfer_result: u128;
-	//
-	// 	match call4evm.unwrap() {
-	// 		CallInfo { exit_reason: ExitReason::Succeed(_), value: return_value, .. } => {
-	// 			let mut a: [u8; 16] = Default::default();
-	// 			a.copy_from_slice(&return_value[16..32]);
-	// 			transfer_result = u128::from_be_bytes(a);
-	// 		},
-	// 		CallInfo { exit_reason: reason, value: _, .. } => {
-	// 			panic!("Call EVM Contract balanceOf failed!({:?})", reason);
-	// 		},
-	// 	};
-	// 	println!("Alice transfer to Bob token:{}", transfer_result);
-	//
-	// 	//4. Get BOB_SHADOW balance of EVM token
-	// 	let balance_of_selector = &Keccak256::digest(b"balanceOf(address)")[0..4];
-	//
-	// 	let source_bob = H160::from(BOB_SHADOW);
-	//
-	// 	let fun_para: [u8; 20] = source_bob.into();
-	// 	let balance_of_input = [&balance_of_selector[..], &[0u8; 12], &fun_para].concat();
-	//
-	// 	let call4evm = <Test as pallet_evm::Config>::Runner::call(
-	// 		source_bob,
-	// 		evm_addr,
-	// 		balance_of_input.clone(),
-	// 		U256::default(),
-	// 		GAS_LIMIT,
-	// 		Some(U256::from(100_000_000_000u64)),
-	// 		None,
-	// 		Some(U256::from(0)),
-	// 		Vec::new(),
-	// 		true,
-	// 		true,
-	// 		None,
-	// 		None,
-	// 		<Test as pallet_evm::Config>::config(),
-	// 	);
-	//
-	// 	assert_ok!(&call4evm);
-	//
-	// 	let bob_balance_before: u128;
-	//
-	// 	match call4evm.unwrap() {
-	// 		CallInfo { exit_reason: ExitReason::Succeed(_), value: return_value, .. } => {
-	// 			let mut a: [u8; 16] = Default::default();
-	// 			a.copy_from_slice(&return_value[16..32]);
-	// 			bob_balance_before = u128::from_be_bytes(a);
-	// 		},
-	// 		CallInfo { exit_reason: reason, value: _, .. } => {
-	// 			panic!("Call EVM Contract balanceOf failed!({:?})", reason);
-	// 		},
-	// 	};
-	// 	println!("bob_balance_before={}", bob_balance_before);
-	//
-	// 	//5.  Call wasm contract to call evm transfer evm token to bob.  H160: evm contract address, H160: bob's address  u128: value
-	// 	let mut a: [u8; 4] = Default::default();
-	// 	a.copy_from_slice(&BlakeTwo256::hash(b"wasmCallEvm")[0..4]);
-	// 	let call = ExecutionInput::new(Selector::new(a));
-	//
-	// 	let transfer_value: u128 = 12_000_000_000_000_000_000;
-	//
-	// 	let call = call
-	// 		.push_arg(format!("0x{:x}", evm_addr))
-	// 		.push_arg(format!("0x{:x}", source_bob))
-	// 		.push_arg(transfer_value);
-	//
-	// 	let result = Contracts::bare_call(
-	// 		ALICE_SHADOW,
-	// 		wasm_addr,
-	// 		0,
-	// 		WEIGHT_LIMIT,
-	// 		None,
-	// 		Encode::encode(&call).to_vec(),
-	// 		DebugInfo::Skip,
-	// 		CollectEvents::Skip,
-	// 		Determinism::Enforced,
-	// 	)
-	// 	.result
-	// 	.unwrap();
-	// 	assert!(!result.did_revert());
-	// 	println!("Alice transfer to Bob from wasm_call_evm:{}", transfer_value);
-	//
-	// 	//6. Get BOB_SHADOW balance of EVM token
-	// 	let call4evm = <Test as pallet_evm::Config>::Runner::call(
-	// 		source_bob,
-	// 		evm_addr,
-	// 		balance_of_input,
-	// 		U256::default(),
-	// 		GAS_LIMIT,
-	// 		Some(U256::from(100_000_000_000u64)),
-	// 		None,
-	// 		Some(U256::from(1)),
-	// 		Vec::new(),
-	// 		true,
-	// 		true,
-	// 		None,
-	// 		None,
-	// 		<Test as pallet_evm::Config>::config(),
-	// 	);
-	//
-	// 	assert_ok!(&call4evm);
-	//
-	// 	let bob_balance_after: u128;
-	//
-	// 	match call4evm.unwrap() {
-	// 		CallInfo { exit_reason: ExitReason::Succeed(_), value: return_value, .. } => {
-	// 			let mut a: [u8; 16] = Default::default();
-	// 			a.copy_from_slice(&return_value[16..32]);
-	// 			bob_balance_after = u128::from_be_bytes(a);
-	// 		},
-	// 		CallInfo { exit_reason: reason, value: _, .. } => {
-	// 			panic!("Call EVM Contract balanceOf failed!({:?})", reason);
-	// 		},
-	// 	};
-	// 	println!("bob_balance_after={}", bob_balance_after);
-	// 	//7. Test  the balance of BOB_SHADOW being correct
-	// 	assert_eq!(bob_balance_after, bob_balance_before + transfer_value);
-	// });
-// }
-
 // Perform test for EVM contract  calling  wasm contract to transfer wasm ERC20 token
-// #[test]
-// fn test_evm_call_wasm() {
-// 	// 1.  Get wasm and evm contract bin
-// 	let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
-// 	let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
-//
-// 	ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
-// 		let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
-// 		let _ = Balances::deposit_creating(&BOB_SHADOW, 10_000_000_000_000_000_000_000);
-// 		let subsistence = <pallet_balances::Pallet<Test> as Currency<AccountId>>::minimum_balance();
-//
-// 		// 2. Create wasm contract
-// 		let mut a: [u8; 4] = Default::default();
-// 		a.copy_from_slice(&BlakeTwo256::hash(b"new")[0..4]);
-// 		let new_call = ExecutionInput::new(Selector::new(a));
-//
-// 		let init_supply: <Test as pallet_balances::Config>::Balance =
-// 			100_000_000_000_000_000_000_000;
-// 		let new_call = new_call.push_arg(init_supply);
-// 		let creation = Contracts::instantiate_with_code(
-// 			RuntimeOrigin::signed(ALICE_SHADOW.clone()),
-// 			subsistence * 100,
-// 			WEIGHT_LIMIT,
-// 			None,
-// 			wasm,
-// 			new_call.encode(),
-// 			vec![],
-// 		);
-// 		let wasm_addr =
-// 			Contracts::contract_address(&ALICE_SHADOW, &wasm_code_hash, &new_call.encode(), &[]);
-//
-// 		assert_ok!(creation);
-// 		//assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
-//
-// 		//2.1 Transfer Token to BOB_SHADOW
-// 		let mut a: [u8; 4] = Default::default();
-// 		a.copy_from_slice(&BlakeTwo256::hash(b"transfer")[0..4]);
-// 		let transfer_call = ExecutionInput::new(Selector::new(a));
-//
-// 		let token: <Test as pallet_balances::Config>::Balance = 1_213_000_789_000_000_000_000;
-// 		let transfer_call = transfer_call.push_arg(&BOB_SHADOW).push_arg(token);
-//
-// 		let result = Contracts::bare_call(
-// 			ALICE_SHADOW.clone(),
-// 			wasm_addr.clone(),
-// 			0,
-// 			WEIGHT_LIMIT,
-// 			None,
-// 			transfer_call.encode(),
-// 			DebugInfo::Skip,
-// 			CollectEvents::Skip,
-// 			Determinism::Enforced,
-// 		)
-// 		.result
-// 		.unwrap();
-//
-// 		assert!(!result.did_revert());
-//
-// 		//3. Create EVM contract
-// 		let source = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
-//
-// 		let creation4evm = <Test as pallet_evm::Config>::Runner::create(
-// 			//RuntimeOrigin::signed(ALICE_SHADOW),
-// 			source,
-// 			evm,
-// 			U256::default(),
-// 			GAS_LIMIT,
-// 			Some(U256::from(100_000_000_000u64)),
-// 			None,
-// 			Some(U256::from(0)),
-// 			Vec::new(),
-// 			true,
-// 			true,
-// 			None,
-// 			None,
-// 			<Test as pallet_evm::Config>::config(),
-// 		);
-//
-// 		assert_ok!(&creation4evm);
-//
-// 		let evm_addr: H160;
-// 		match creation4evm.unwrap() {
-// 			CreateInfo { exit_reason: ExitReason::Succeed(_), value: create_address, .. } => {
-// 				evm_addr = create_address;
-// 			},
-// 			CreateInfo { exit_reason: reason, value: _, .. } => {
-// 				panic!("Create EVM Contract failed!({:?})", reason);
-// 			},
-// 		}
-//
-// 		//4. Get BOB_SHADOW balance of wasm token
-// 		let mut a: [u8; 4] = Default::default();
-// 		a.copy_from_slice(&BlakeTwo256::hash(b"balance_of")[0..4]);
-// 		let balance_of_call = ExecutionInput::new(Selector::new(a));
-//
-// 		let balance_of_call = balance_of_call.push_arg(&BOB_SHADOW);
-//
-// 		let result = Contracts::bare_call(
-// 			BOB_SHADOW.clone(),
-// 			wasm_addr.clone(),
-// 			0,
-// 			WEIGHT_LIMIT,
-// 			None,
-// 			//Encode::encode(&balance_of_call).to_vec(),
-// 			balance_of_call.encode(),
-// 			DebugInfo::Skip,
-// 			CollectEvents::Skip,
-// 			Determinism::Enforced,
-// 		)
-// 		.result
-// 		.unwrap();
-// 		assert!(!result.did_revert());
-//
-// 		println!("result data before:{:?}", result);
-// 		let bob_balance_before = result.data;
-// 		let bob_balance_before_test = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_before[..])
-// 			.unwrap()
-// 			.unwrap();
-// 		println!("BOB_SHADOW's wasm token balance before:{:?}", bob_balance_before_test);
-//
-// 		//5.  Call EVM contract to call wasm contract transfer wasm token to bob,  the last bytes32 is the wasm contract accountid
-// 		let evm_call_wasm_selector =
-// 			&Keccak256::digest(b"evmCallWasm(bytes32,uint256,bytes32)")[0..4];
-//
-// 		let transfer_value: u128 = 12000000000000000000;
-//
-// 		let wasm_contract: [u8; 32] = wasm_addr.clone().into();
-//
-// 		let evm_call_wasm_input = [
-// 			&evm_call_wasm_selector[..],
-// 			AsRef::<[u8; 32]>::as_ref(&BOB_SHADOW),
-// 			&[0u8; 16],
-// 			&transfer_value.to_be_bytes(),
-// 			&wasm_contract,
-// 		]
-// 		.concat();
-//
-// 		let source_alice = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
-//
-// 		let call4evm = <Test as pallet_evm::Config>::Runner::call(
-// 			source_alice,
-// 			evm_addr,
-// 			evm_call_wasm_input,
-// 			U256::default(),
-// 			GAS_LIMIT,
-// 			Some(U256::from(100_000_000_000u64)),
-// 			None,
-// 			Some(U256::from(1)),
-// 			Vec::new(),
-// 			true,
-// 			true,
-// 			None,
-// 			None,
-// 			<Test as pallet_evm::Config>::config(),
-// 		);
-// 		assert_ok!(&call4evm);
-// 		assert!(&call4evm.unwrap().exit_reason.is_succeed());
-// 		println!("Alice transfer to Bob from evm_call_wasm:{}", transfer_value);
-//
-// 		//6. Get BOB_SHADOW balance of wasm token
-// 		let result = Contracts::bare_call(
-// 			BOB_SHADOW.clone(),
-// 			wasm_addr.clone(),
-// 			0,
-// 			WEIGHT_LIMIT,
-// 			None,
-// 			Encode::encode(&balance_of_call).to_vec(),
-// 			DebugInfo::Skip,
-// 			CollectEvents::Skip,
-// 			Determinism::Enforced,
-// 		)
-// 		.result
-// 		.unwrap();
-// 		assert!(!result.did_revert());
-//
-// 		println!("result data after:{:?}", result);
-// 		let bob_balance_after = result.data;
-// 		let bob_balance_after_test = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_after[..])
-// 			.unwrap()
-// 			.unwrap();
-// 		println!("BOB_SHADOW's wasm token balance after:{:?}", bob_balance_after_test);
-//
-//
-// 		//7. Test  the balance of BOB_SHADOW being correct
-// 		let after = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_after[..])
-// 			.unwrap()
-// 			.unwrap();
-// 		let before = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_before[..])
-// 			.unwrap()
-// 			.unwrap();
-// 		assert_eq!(after, before + transfer_value);
-// 	});
-// }
+#[test]
+fn test_evm_call_wasm() {
+	// 1.  Get wasm and evm contract bin
+	let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
+	let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
+
+	ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
+		let ALICE_SHADOW = AccountId20::from(A_SHADOW);
+		let BOB_SHADOW = AccountId20::from(B_SHADOW);
+		let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
+		let _ = Balances::deposit_creating(&BOB_SHADOW, 10_000_000_000_000_000_000_000);
+		let subsistence = <pallet_balances::Pallet<Test> as Currency<AccountId>>::minimum_balance();
+
+		// 2. Create wasm contract
+		let mut a: [u8; 4] = Default::default();
+		a.copy_from_slice(&BlakeTwo256::hash(b"new")[0..4]);
+		let new_call = ExecutionInput::new(Selector::new(a));
+
+		let init_supply: <Test as pallet_balances::Config>::Balance =
+			100_000_000_000_000_000_000_000;
+		let new_call = new_call.push_arg(init_supply);
+		let creation = Contracts::instantiate_with_code(
+			RuntimeOrigin::signed(ALICE_SHADOW.clone()),
+			subsistence * 100,
+			WEIGHT_LIMIT,
+			None,
+			wasm,
+			new_call.encode(),
+			vec![],
+		);
+		let wasm_addr =
+			Contracts::contract_address(&ALICE_SHADOW, &wasm_code_hash, &new_call.encode(), &[]);
+
+		assert_ok!(creation);
+		//assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
+
+		//2.1 Transfer Token to BOB_SHADOW
+		let mut a: [u8; 4] = Default::default();
+		a.copy_from_slice(&BlakeTwo256::hash(b"transfer")[0..4]);
+		let transfer_call = ExecutionInput::new(Selector::new(a));
+
+		let token: <Test as pallet_balances::Config>::Balance = 1_213_000_789_000_000_000_000;
+		let transfer_call = transfer_call.push_arg(&BOB_SHADOW).push_arg(token);
+
+		let result = Contracts::bare_call(
+			ALICE_SHADOW.clone(),
+			wasm_addr.clone(),
+			0,
+			WEIGHT_LIMIT,
+			None,
+			transfer_call.encode(),
+			DebugInfo::Skip,
+			CollectEvents::Skip,
+			Determinism::Enforced,
+		)
+		.result
+		.unwrap();
+
+		assert!(!result.did_revert());
+
+		//3. Create EVM contract
+		let source = H160::from(ALICE_SHADOW)	;
+
+		let creation4evm = <Test as pallet_evm::Config>::Runner::create(
+			//RuntimeOrigin::signed(ALICE_SHADOW),
+			source,
+			evm,
+			U256::default(),
+			GAS_LIMIT,
+			Some(U256::from(100_000_000_000u64)),
+			None,
+			Some(U256::from(0)),
+			Vec::new(),
+			true,
+			true,
+			None,
+			None,
+			<Test as pallet_evm::Config>::config(),
+		);
+
+		assert_ok!(&creation4evm);
+
+		let evm_addr: H160;
+		match creation4evm.unwrap() {
+			CreateInfo { exit_reason: ExitReason::Succeed(_), value: create_address, .. } => {
+				evm_addr = create_address;
+			},
+			CreateInfo { exit_reason: reason, value: _, .. } => {
+				panic!("Create EVM Contract failed!({:?})", reason);
+			},
+		}
+
+		//4. Get BOB_SHADOW balance of wasm token
+		let mut a: [u8; 4] = Default::default();
+		a.copy_from_slice(&BlakeTwo256::hash(b"balance_of")[0..4]);
+		let balance_of_call = ExecutionInput::new(Selector::new(a));
+
+		let balance_of_call = balance_of_call.push_arg(&BOB_SHADOW);
+
+		let result = Contracts::bare_call(
+			BOB_SHADOW.clone(),
+			wasm_addr.clone(),
+			0,
+			WEIGHT_LIMIT,
+			None,
+			//Encode::encode(&balance_of_call).to_vec(),
+			balance_of_call.encode(),
+			DebugInfo::Skip,
+			CollectEvents::Skip,
+			Determinism::Enforced,
+		)
+		.result
+		.unwrap();
+		assert!(!result.did_revert());
+
+		println!("result data before:{:?}", result);
+		let bob_balance_before = result.data;
+		let bob_balance_before_test = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_before[..])
+			.unwrap()
+			.unwrap();
+		println!("BOB_SHADOW's wasm token balance before:{:?}", bob_balance_before_test);
+
+		//5.  Call EVM contract to call wasm contract transfer wasm token to bob,  the last bytes32 is the wasm contract accountid
+		let evm_call_wasm_selector =
+			&Keccak256::digest(b"evmCallWasm(bytes32,uint256,bytes32)")[0..4];
+
+		let transfer_value: u128 = 12000000000000000000;
+
+		let wasm_contract: [u8; 20] = wasm_addr.clone().into();
+
+		let evm_call_wasm_input = [
+			&evm_call_wasm_selector[..],
+			AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW),
+			&[0u8; 12],  // padding
+			&[0u8; 16],  // padding
+			&transfer_value.to_be_bytes(),
+			&wasm_contract,
+			&[0u8; 12],  // padding
+		]
+		.concat();
+
+		println!("evm_call_wasm_input={:?}", evm_call_wasm_input);
+		let source_alice = H160::from(ALICE_SHADOW);
+
+		let call4evm = <Test as pallet_evm::Config>::Runner::call(
+			source_alice,
+			evm_addr,
+			evm_call_wasm_input,
+			U256::default(),
+			GAS_LIMIT,
+			Some(U256::from(100_000_000_000u64)),
+			None,
+			Some(U256::from(1)),
+			Vec::new(),
+			true,
+			true,
+			None,
+			None,
+			<Test as pallet_evm::Config>::config(),
+		);
+		println!("call4evm={:?}", call4evm);
+		assert_ok!(&call4evm);
+		assert!(&call4evm.unwrap().exit_reason.is_succeed());
+		println!("Alice transfer to Bob from evm_call_wasm:{}", transfer_value);
+
+		//6. Get BOB_SHADOW balance of wasm token
+		let result = Contracts::bare_call(
+			BOB_SHADOW.clone(),
+			wasm_addr.clone(),
+			0,
+			WEIGHT_LIMIT,
+			None,
+			Encode::encode(&balance_of_call).to_vec(),
+			DebugInfo::Skip,
+			CollectEvents::Skip,
+			Determinism::Enforced,
+		)
+		.result
+		.unwrap();
+		assert!(!result.did_revert());
+
+		println!("result data after:{:?}", result);
+		let bob_balance_after = result.data;
+		let bob_balance_after_test = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_after[..])
+			.unwrap()
+			.unwrap();
+		println!("BOB_SHADOW's wasm token balance after:{:?}", bob_balance_after_test);
+
+
+		//7. Test  the balance of BOB_SHADOW being correct
+		let after = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_after[..])
+			.unwrap()
+			.unwrap();
+		let before = <Result<u128, u8> as Decode>::decode(&mut &bob_balance_before[..])
+			.unwrap()
+			.unwrap();
+		assert_eq!(after, before + transfer_value);
+	});
+}
 //
 // // Perform test for wasm contract calling  EVM contract to get bob's EVM ERC20 token balance
 // #[test]
@@ -1139,4 +1137,3 @@ fn test_wasm_call_evm() {
 // 			Some(UnifiedAddress::<Test>::WasmVM(wasm_addr))
 // 		);
 // 	});
-// }

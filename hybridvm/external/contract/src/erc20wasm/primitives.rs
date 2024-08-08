@@ -14,6 +14,10 @@
 
 use core::array::TryFromSliceError;
 use derive_more::From;
+#[cfg(feature = "std")]
+use ink::storage::traits::StorageLayout;
+#[cfg(feature = "std")]
+use ink_metadata::layout::{Layout, LayoutKey, LeafLayout};
 use scale::{
     Decode,
     Encode,
@@ -83,6 +87,13 @@ impl<'a> TryFrom<&'a [u8]> for AccountId {
     fn try_from(bytes: &'a [u8]) -> Result<Self, TryFromSliceError> {
         let address = <[u8; 20]>::try_from(bytes)?;
         Ok(Self(address))
+    }
+}
+
+#[cfg(feature = "std")]
+impl StorageLayout for AccountId {
+    fn layout(key: &u32) -> Layout {
+        Layout::Leaf(LeafLayout::from_key::<AccountId>(LayoutKey::from(key)))
     }
 }
 
