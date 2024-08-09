@@ -28,11 +28,10 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use hp_system::{AccountId32Mapping, AccountIdMapping, EvmHybridVMExtension, U256BalanceMapping};
-use pallet_contracts::chain_extension::SysConfig;
-use pallet_evm::{AddressMapping, BalanceOf, EnsureAccountId20, EnsureAddressTruncated, FeeCalculator, GasWeightMapping, IdentityAddressMapping, IsPrecompileResult, PrecompileHandle, PrecompileResult, PrecompileSet};
+use pallet_evm::{AddressMapping, BalanceOf, EnsureAccountId20, FeeCalculator, GasWeightMapping, IdentityAddressMapping, IsPrecompileResult, PrecompileHandle, PrecompileResult, PrecompileSet};
 use pallet_evm_precompile_simple::{ECRecover, Identity, Ripemd160, Sha256};
 use sp_core::{
-	crypto::{AccountId32, UncheckedFrom},
+	crypto::AccountId32,
 	ConstBool, H256, U256,
 };
 use fp_account::AccountId20;
@@ -439,22 +438,22 @@ impl pallet_hybrid_vm::Config for Test {
 	type GasPrice = GasPrice;
 }
 
-pub(crate) const A: [u8; 32] = [
-	1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7,
-];
-pub(crate) const B: [u8; 32] = [
-	2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8,
-];
+// pub(crate) const A: [u8; 32] = [
+// 	1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7,
+// ];
+// pub(crate) const B: [u8; 32] = [
+// 	2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8,
+// ];
 
 // pub const ALICE: AccountId32 = AccountId32::new(A);
 // pub const BOB: AccountId32 = AccountId32::new(B);
 
-pub(crate) const A_SHADOW: [u8; 32] = [
-	1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
-pub(crate) const B_SHADOW: [u8; 32] = [
-	2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
+pub(crate)  const ALICE_SHADOW: AccountId20 = AccountId20([
+	1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4
+]);
+pub(crate)  const BOB_SHADOW: AccountId20 = AccountId20([
+	2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5
+]);
 // Account shadow is the account which data is the source account data with the last 12 bytes setting zero
 // pub const ALICE_SHADOW: AccountId32 = AccountId32::new(A_SHADOW);
 // pub const BOB_SHADOW: AccountId32 = AccountId32::new(B_SHADOW);
