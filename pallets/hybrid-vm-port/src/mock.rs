@@ -30,7 +30,6 @@ use frame_support::{
 	weights::Weight,
 	ConsensusEngineId, PalletId,
 };
-use sp_core::crypto::UncheckedFrom;
 use sp_core::{hashing::keccak_256, ConstBool, H160, H256, U256};
 
 use sp_runtime::{
@@ -38,13 +37,14 @@ use sp_runtime::{
 	AccountId32, BuildStorage, Perbill,
 };
 // Frontier
-use pallet_evm::{AddressMapping, BalanceOf, EnsureAddressTruncated, FeeCalculator};
+use pallet_evm::{AddressMapping, BalanceOf, EnsureAccountId20, FeeCalculator, IdentityAddressMapping};
 
 // Contracts
 use pallet_contracts::chain_extension::{Environment, Ext, InitState, RetVal};
 
 // HybridVM
 use byte_slice_cast::AsByteSlice;
+use fp_account::AccountId20;
 use hp_system::{AccountId32Mapping, AccountIdMapping, U256BalanceMapping};
 
 use super::*;
@@ -85,7 +85,7 @@ impl frame_system::Config for Test {
 	type Nonce = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = AccountId32;
+	type AccountId = AccountId20;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = frame_system::mocking::MockBlock<Self>;
 	type BlockHashCount = BlockHashCount;
@@ -177,9 +177,9 @@ impl pallet_evm::Config for Test {
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
 	type BlockHashMapping = crate::EthereumBlockHashMapping<Self>;
-	type CallOrigin = EnsureAddressTruncated;
-	type WithdrawOrigin = EnsureAddressTruncated;
-	type AddressMapping = CompactAddressMapping;
+	type CallOrigin = EnsureAccountId20;
+	type WithdrawOrigin = EnsureAccountId20;
+	type AddressMapping = IdentityAddressMapping;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type PrecompilesType = ();
@@ -209,7 +209,7 @@ impl pallet_contracts::chain_extension::ChainExtension<Test> for HybridVMChainEx
 	fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
 	where
 		E: Ext<T = Test>,
-		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+		// <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
 	{
 		let func_id = env.func_id();
 		match func_id {
@@ -227,7 +227,7 @@ pub fn h160_to_accountid<E: Ext<T = Test>>(
 ) -> Result<RetVal, DispatchError> {
 	let mut envbuf = env.buf_in_buf_out();
 	let input: H160 = envbuf.read_as()?;
-	let account_id = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
+	let account_id: AccountId20 = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
 	let account_id_slice = account_id.encode();
 	let output = envbuf
 		.write(&account_id_slice, false, None)
@@ -270,10 +270,10 @@ parameter_types! {
 }
 
 pub struct EnsureAccount<T, A>(sp_std::marker::PhantomData<(T, A)>);
-impl<T: Config, A: sp_core::Get<Option<AccountId32>>>
+impl<T: Config, A: sp_core::Get<Option<AccountId20>>>
 	EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
 where
-	<T as frame_system::Config>::AccountId: From<AccountId32>,
+	<T as frame_system::Config>::AccountId: From<AccountId20>,
 {
 	type Success = T::AccountId;
 
@@ -354,8 +354,8 @@ impl U256BalanceMapping for Test {
 
 impl AccountIdMapping<Test> for Test {
 	fn into_address(account_id: <Test as frame_system::Config>::AccountId) -> H160 {
-		let mut address_arr = [0u8; 32];
-		address_arr[0..32].copy_from_slice(account_id.as_byte_slice());
+		let mut address_arr = [0u8; 20];
+		address_arr[0..20].copy_from_slice(account_id.as_byte_slice());
 
 		H160::from_slice(&address_arr[0..20])
 	}
@@ -367,7 +367,11 @@ impl AccountId32Mapping<Test> for Test {
 	}
 
 	fn id_to_id32(account_id: <Test as frame_system::Config>::AccountId) -> AccountId32 {
-		account_id.into()
+		let mut result = [0u8; 32];
+		result[..20].copy_from_slice(&account_id.0);
+		result[20..32].copy_from_slice(&[0u8; 12]);
+
+		AccountId32::new(result)
 	}
 }
 
@@ -452,7 +456,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 pub struct AccountInfo {
 	pub address: H160,
-	pub account_id: AccountId32,
+	pub account_id: AccountId20,
 	pub private_key: H256,
 }
 
@@ -462,12 +466,12 @@ fn address_build(seed: u8) -> AccountInfo {
 	let public_key = &libsecp256k1::PublicKey::from_secret_key(&secret_key).serialize()[1..65];
 	let address = H160::from(H256::from(keccak_256(public_key)));
 
-	let mut data = [0u8; 32];
-	data[0..20].copy_from_slice(&address[..]);
+	// let mut data = [0u8; 32];
+	// data[0..20].copy_from_slice(&address[..]);
 
 	AccountInfo {
 		private_key,
-		account_id: AccountId32::from(Into::<[u8; 32]>::into(data)),
+		account_id: address.into(),
 		address,
 	}
 }

@@ -31,9 +31,9 @@
 
 extern crate alloc;
 
-#[cfg(all(feature = "std", test))]
+#[cfg(test)]
 mod mock;
-#[cfg(all(feature = "std", test))]
+#[cfg(test)]
 mod tests;
 
 use alloc::{vec, vec::Vec, string::{String, ToString}, boxed::Box};
