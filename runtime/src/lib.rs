@@ -12,20 +12,29 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 // Imports
-use parity_scale_codec::{Decode, Encode};
 use byte_slice_cast::AsByteSlice;
+use parity_scale_codec::{Decode, Encode};
 use sp_api::impl_runtime_apis;
 use sp_core::{
-    crypto::{ByteArray, KeyTypeId, AccountId32},
+    crypto::{AccountId32, ByteArray, KeyTypeId},
     OpaqueMetadata, H160, H256, U256,
 };
-use sp_runtime::{create_runtime_str, curve::PiecewiseLinear, generic::{self, Era}, impl_opaque_keys, traits::{
-    self, AccountIdConversion, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
-    IdentifyAccount, IdentityLookup, NumberFor, One, OpaqueKeys, PostDispatchInfoOf,
-    SaturatedConversion, UniqueSaturatedInto, Verify,
-}, transaction_validity::{
-    TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
-}, ApplyExtrinsicResult, ConsensusEngineId, ExtrinsicInclusionMode, FixedU128, Perbill, Percent, Permill, DispatchError};
+use sp_runtime::{
+    create_runtime_str,
+    curve::PiecewiseLinear,
+    generic::{self, Era},
+    impl_opaque_keys,
+    traits::{
+        self, AccountIdConversion, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
+        IdentifyAccount, IdentityLookup, NumberFor, One, OpaqueKeys, PostDispatchInfoOf,
+        SaturatedConversion, UniqueSaturatedInto, Verify,
+    },
+    transaction_validity::{
+        TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
+    },
+    ApplyExtrinsicResult, ConsensusEngineId, DispatchError, ExtrinsicInclusionMode, FixedU128,
+    Perbill, Percent, Permill,
+};
 use sp_staking::currency_to_vote::U128CurrencyToVote;
 use sp_std::{marker::PhantomData, prelude::*};
 use sp_version::RuntimeVersion;
@@ -64,11 +73,14 @@ use fp_account::{AccountId20, EthereumSignature};
 use fp_evm::weight_per_gas;
 use fp_rpc::TransactionStatus;
 use frame_support::traits::EnsureOrigin;
+use pallet_evm::{
+    Account as EVMAccount, AddressMapping, EnsureAccountId20, FeeCalculator,
+    IdentityAddressMapping, Runner,
+};
 use pallet_hybrid_vm_port::{
     Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
     TransactionData,
 };
-use pallet_evm::{Account as EVMAccount, AddressMapping, EnsureAccountId20, FeeCalculator, IdentityAddressMapping, Runner};
 // other
 use static_assertions::const_assert;
 
@@ -77,13 +89,13 @@ use constants::{currency::*, time::*};
 use precompiles::FrontierPrecompiles;
 
 // A few exports that help ease life for downstream crates.
-pub use frame_system::{limits::BlockWeights, Call as SystemCall, EnsureRoot, EnsureSigned};
 use frame_system::Config;
+pub use frame_system::{limits::BlockWeights, Call as SystemCall, EnsureRoot, EnsureSigned};
+use hp_system::{AccountId32Mapping, AccountIdMapping, U256BalanceMapping};
 pub use pallet_balances::Call as BalancesCall;
 use pallet_contracts::chain_extension::{Environment, Ext, InitState, RetVal};
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::Multiplier;
-use hp_system::{AccountId32Mapping, AccountIdMapping, U256BalanceMapping};
 
 #[cfg(any(feature = "std", test))]
 pub use pallet_staking::StakerStatus;
@@ -485,7 +497,7 @@ impl pallet_contracts::chain_extension::ChainExtension<Runtime> for HybridVMChai
     fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
     where
         E: Ext<T = Runtime>,
-    // <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+        // <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
     {
         let func_id = env.func_id();
         match func_id {
@@ -503,7 +515,8 @@ pub fn h160_to_accountid<E: Ext<T = Runtime>>(
 ) -> Result<RetVal, DispatchError> {
     let mut envbuf = env.buf_in_buf_out();
     let input: H160 = envbuf.read_as()?;
-    let account_id: AccountId20 = <Runtime as pallet_evm::Config>::AddressMapping::into_account_id(input);
+    let account_id: AccountId20 =
+        <Runtime as pallet_evm::Config>::AddressMapping::into_account_id(input);
     let account_id_slice = account_id.encode();
     let output = envbuf
         .write(&account_id_slice, false, None)
@@ -515,13 +528,13 @@ pub fn h160_to_accountid<E: Ext<T = Runtime>>(
 }
 
 parameter_types! {
-	pub UploadAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
-	pub InstantiateAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
+    pub UploadAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
+    pub InstantiateAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
 }
 
 pub struct EnsureAccount<T, A>(sp_std::marker::PhantomData<(T, A)>);
 impl<T: Config, A: sp_core::Get<Option<AccountId20>>>
-EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
+    EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
 where
     <T as frame_system::Config>::AccountId: From<AccountId20>,
 {
@@ -1361,9 +1374,9 @@ impl Get<Option<U256>> for GasPrice {
 }
 
 parameter_types! {
-	pub const EnableCallEVM: bool = true;
-	pub const EnableCallWasmVM: bool = true;
-	pub const GasLimit: u64 = 10_000_000u64;
+    pub const EnableCallEVM: bool = true;
+    pub const EnableCallWasmVM: bool = true;
+    pub const GasLimit: u64 = 10_000_000u64;
 }
 
 impl U256BalanceMapping for Runtime {
@@ -1427,7 +1440,10 @@ construct_runtime!(
 pub struct TransactionConverter;
 
 impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
-    fn convert_transaction(&self, transaction: pallet_hybrid_vm_port::Transaction) -> UncheckedExtrinsic {
+    fn convert_transaction(
+        &self,
+        transaction: pallet_hybrid_vm_port::Transaction,
+    ) -> UncheckedExtrinsic {
         UncheckedExtrinsic::new_unsigned(
             pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
         )
@@ -1516,7 +1532,9 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
         len: usize,
     ) -> Option<TransactionValidity> {
         match self {
-            RuntimeCall::HybridVMPort(call) => call.validate_self_contained(info, dispatch_info, len),
+            RuntimeCall::HybridVMPort(call) => {
+                call.validate_self_contained(info, dispatch_info, len)
+            },
             _ => None,
         }
     }

@@ -287,15 +287,15 @@ mod devnet_keys {
             sp_core::sr25519::Public::from_raw(hex!(
                 "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
             ))
-                .into(),
+            .into(),
             sp_core::ed25519::Public::from_raw(hex!(
                 "88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee"
             ))
-                .into(),
+            .into(),
             sp_core::sr25519::Public::from_raw(hex!(
                 "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
             ))
-                .into(),
+            .into(),
         )
     }
 
@@ -306,15 +306,15 @@ mod devnet_keys {
             sp_core::sr25519::Public::from_raw(hex!(
                 "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
             ))
-                .into(),
+            .into(),
             sp_core::ed25519::Public::from_raw(hex!(
                 "d17c2d7823ebf260fd138f2d7e27d114c0145d968b5ff5006125f2414fadae69"
             ))
-                .into(),
+            .into(),
             sp_core::sr25519::Public::from_raw(hex!(
                 "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
             ))
-                .into(),
+            .into(),
         )
     }
 }

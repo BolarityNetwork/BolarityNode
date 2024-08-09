@@ -28,8 +28,8 @@ use frame_support::RuntimeDebugNoBound;
 use pallet_contracts::chain_extension::{Environment, Ext, InitState, RetVal};
 use sp_core::{H160, U256};
 use sp_runtime::{AccountId32, DispatchError};
-use sp_std::vec::Vec;
 use sp_std::vec;
+use sp_std::vec::Vec;
 //use sp_std::fmt::Debug;
 use hp_system::{AccountId32Mapping, AccountIdMapping, U256BalanceMapping};
 
@@ -37,121 +37,121 @@ pub use self::pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use fp_account::AccountId20;
-	use super::*;
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+    use super::*;
+    use fp_account::AccountId20;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
 
-	type Result<T> = sp_std::result::Result<T, DispatchError>;
+    type Result<T> = sp_std::result::Result<T, DispatchError>;
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, RuntimeDebugNoBound, PartialEq)]
-	#[scale_info(skip_type_params(T))]
-	pub enum UnifiedAddress<T: Config> {
-		WasmVM(T::AccountId),
-	}
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, RuntimeDebugNoBound, PartialEq)]
+    #[scale_info(skip_type_params(T))]
+    pub enum UnifiedAddress<T: Config> {
+        WasmVM(T::AccountId),
+    }
 
-	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_contracts::Config + pallet_evm::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+    #[pallet::config]
+    pub trait Config: frame_system::Config + pallet_contracts::Config + pallet_evm::Config {
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-		// Currency type for balance storage.
-		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+        // Currency type for balance storage.
+        type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
 
-		type U256BalanceMapping: U256BalanceMapping<Balance = <<Self as pallet_contracts::Config>::Currency as Inspect<Self::AccountId>>::Balance>;
+        type U256BalanceMapping: U256BalanceMapping<Balance = <<Self as pallet_contracts::Config>::Currency as Inspect<Self::AccountId>>::Balance>;
 
-		type AccountIdMapping: AccountIdMapping<Self>;
+        type AccountIdMapping: AccountIdMapping<Self>;
 
-		type AccountId32Mapping: AccountId32Mapping<Self>;
+        type AccountId32Mapping: AccountId32Mapping<Self>;
 
-		#[pallet::constant]
-		type EnableCallEVM: Get<bool>;
+        #[pallet::constant]
+        type EnableCallEVM: Get<bool>;
 
-		#[pallet::constant]
-		type EnableCallWasmVM: Get<bool>;
+        #[pallet::constant]
+        type EnableCallWasmVM: Get<bool>;
 
-		#[pallet::constant]
-		type GasLimit: Get<u64>;
+        #[pallet::constant]
+        type GasLimit: Get<u64>;
 
-		#[pallet::constant]
-		type GasPrice: Get<Option<U256>>;
-	}
+        #[pallet::constant]
+        type GasPrice: Get<Option<U256>>;
+    }
 
-	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+    #[pallet::pallet]
+    pub struct Pallet<T>(_);
 
-	// HybridVM contracts
-	#[pallet::storage]
-	#[pallet::getter(fn hvm_contracts)]
-	pub type HvmContracts<T: Config> =
-		StorageMap<_, Twox64Concat, H160, UnifiedAddress<T>, OptionQuery>;
+    // HybridVM contracts
+    #[pallet::storage]
+    #[pallet::getter(fn hvm_contracts)]
+    pub type HvmContracts<T: Config> =
+        StorageMap<_, Twox64Concat, H160, UnifiedAddress<T>, OptionQuery>;
 
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		EVMExecuted(H160),
-		WasmVMExecuted(T::AccountId),
-		HybridVMCalled(T::AccountId),
-		RegistContract(H160, UnifiedAddress<T>, T::AccountId),
-	}
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        EVMExecuted(H160),
+        WasmVMExecuted(T::AccountId),
+        HybridVMCalled(T::AccountId),
+        RegistContract(H160, UnifiedAddress<T>, T::AccountId),
+    }
 
-	#[pallet::error]
-	#[derive(PartialEq)]
-	pub enum Error<T> {
-		EVMExecuteFailed,
-		WasmVMExecuteFailed,
-		UnifiedAddressError,
-		NoWasmVMContract,
-	}
+    #[pallet::error]
+    #[derive(PartialEq)]
+    pub enum Error<T> {
+        EVMExecuteFailed,
+        WasmVMExecuteFailed,
+        UnifiedAddressError,
+        NoWasmVMContract,
+    }
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		#[pallet::call_index(0)]
-		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
-		pub fn regist_contract(
-			origin: OriginFor<T>,
-			unified_address: UnifiedAddress<T>,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
+        #[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+        pub fn regist_contract(
+            origin: OriginFor<T>,
+            unified_address: UnifiedAddress<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
 
-			match unified_address.clone() {
-				UnifiedAddress::<T>::WasmVM(account) => {
-					let value = pallet_contracts::Pallet::<T>::get_storage(account.clone(), vec![]);
-					match value {
-						Err(t) => {
-							if t == pallet_contracts::ContractAccessError::DoesntExist {
-								return Err(Error::<T>::NoWasmVMContract.into());
-							}
-						},
-						_ => {},
-					}
-					let address = T::AccountIdMapping::into_address(account);
+            match unified_address.clone() {
+                UnifiedAddress::<T>::WasmVM(account) => {
+                    let value = pallet_contracts::Pallet::<T>::get_storage(account.clone(), vec![]);
+                    match value {
+                        Err(t) => {
+                            if t == pallet_contracts::ContractAccessError::DoesntExist {
+                                return Err(Error::<T>::NoWasmVMContract.into());
+                            }
+                        },
+                        _ => {},
+                    }
+                    let address = T::AccountIdMapping::into_address(account);
 
-					HvmContracts::<T>::insert(address, unified_address.clone());
+                    HvmContracts::<T>::insert(address, unified_address.clone());
 
-					Self::deposit_event(Event::RegistContract(address, unified_address, who));
-					Ok(().into())
-				},
-			}
-		}
-	}
+                    Self::deposit_event(Event::RegistContract(address, unified_address, who));
+                    Ok(().into())
+                },
+            }
+        }
+    }
 
-	impl<T: Config> Pallet<T>
-	where
-		T::AccountId: From<AccountId32> + Into<AccountId20>,
-	{
-		pub fn call_wasm_vm(
-			origin: OriginFor<T>,
-			data: Vec<u8>,
-			target_gas: Weight,
-		) -> Result<(Vec<u8>, Weight)> {
-			InterCall::<T>::call_wasm_vm(origin, data, target_gas)
-		}
+    impl<T: Config> Pallet<T>
+    where
+        T::AccountId: From<AccountId32> + Into<AccountId20>,
+    {
+        pub fn call_wasm_vm(
+            origin: OriginFor<T>,
+            data: Vec<u8>,
+            target_gas: Weight,
+        ) -> Result<(Vec<u8>, Weight)> {
+            InterCall::<T>::call_wasm_vm(origin, data, target_gas)
+        }
 
-		pub fn call_evm<E: Ext<T = T>>(env: Environment<E, InitState>) -> Result<RetVal> {
-			InterCall::<T>::call_evm(env)
-		}
-	}
+        pub fn call_evm<E: Ext<T = T>>(env: Environment<E, InitState>) -> Result<RetVal> {
+            InterCall::<T>::call_evm(env)
+        }
+    }
 }

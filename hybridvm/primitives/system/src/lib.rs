@@ -22,23 +22,23 @@ use sp_runtime::AccountId32;
 use sp_std::vec::Vec;
 
 pub trait EvmHybridVMExtension<C: frame_system::Config> {
-	fn call_hybrid_vm(
-		origin: OriginFor<C>,
-		data: Vec<u8>,
-		target_gas: Option<u64>,
-	) -> Result<(Vec<u8>, u64), sp_runtime::DispatchError>;
+    fn call_hybrid_vm(
+        origin: OriginFor<C>,
+        data: Vec<u8>,
+        target_gas: Option<u64>,
+    ) -> Result<(Vec<u8>, u64), sp_runtime::DispatchError>;
 }
 
 pub trait U256BalanceMapping {
-	type Balance: Balance;
-	fn u256_to_balance(value: U256) -> Result<Self::Balance, &'static str>;
+    type Balance: Balance;
+    fn u256_to_balance(value: U256) -> Result<Self::Balance, &'static str>;
 }
 
 pub trait AccountIdMapping<C: frame_system::Config> {
-	fn into_address(account_id: C::AccountId) -> H160;
+    fn into_address(account_id: C::AccountId) -> H160;
 }
 
 pub trait AccountId32Mapping<C: frame_system::Config> {
-	fn id32_to_id(id32: AccountId32) -> C::AccountId;
-	fn id_to_id32(account_id: C::AccountId) -> AccountId32;
+    fn id32_to_id(id32: AccountId32) -> C::AccountId;
+    fn id_to_id32(account_id: C::AccountId) -> AccountId32;
 }
