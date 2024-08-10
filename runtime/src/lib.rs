@@ -72,7 +72,7 @@ use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter};
 use fp_account::EthereumSignature;
 use fp_evm::weight_per_gas;
 use fp_rpc::TransactionStatus;
-use pallet_ethereum::{
+use pallet_hybrid_vm_port::{
     Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
     TransactionData,
 };
@@ -1182,7 +1182,7 @@ impl pallet_evm::Config for Runtime {
     type FeeCalculator = BaseFee;
     type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
     type WeightPerGas = WeightPerGas;
-    type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
+    type BlockHashMapping = pallet_hybrid_vm_port::EthereumBlockHashMapping<Self>;
     type CallOrigin = EnsureAccountId20;
     type WithdrawOrigin = EnsureAccountId20;
     type AddressMapping = IdentityAddressMapping;
@@ -1207,9 +1207,9 @@ parameter_types! {
     pub const PostBlockAndTxnHashes: PostLogContent = PostLogContent::BlockAndTxnHashes;
 }
 
-impl pallet_ethereum::Config for Runtime {
+impl pallet_hybrid_vm_port::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
+    type StateRoot = pallet_hybrid_vm_port::IntermediateStateRoot<Self>;
     type PostLogContent = PostBlockAndTxnHashes;
     type ExtraDataLength = ConstU32<30>;
 }
@@ -1329,7 +1329,7 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment,
         Sudo: pallet_sudo,
         Treasury: pallet_treasury,
-        Ethereum: pallet_ethereum,
+        Ethereum: pallet_hybrid_vm_port,
         // Authorship must be before session in order to note author in the correct session and era
         // for im-online and staking.
         Authorship: pallet_authorship,
@@ -1370,9 +1370,9 @@ construct_runtime!(
 pub struct TransactionConverter;
 
 impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
-    fn convert_transaction(&self, transaction: pallet_ethereum::Transaction) -> UncheckedExtrinsic {
+    fn convert_transaction(&self, transaction: pallet_hybrid_vm_port::Transaction) -> UncheckedExtrinsic {
         UncheckedExtrinsic::new_unsigned(
-            pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+            pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
         )
     }
 }
@@ -1380,10 +1380,10 @@ impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
 impl fp_rpc::ConvertTransaction<opaque::UncheckedExtrinsic> for TransactionConverter {
     fn convert_transaction(
         &self,
-        transaction: pallet_ethereum::Transaction,
+        transaction: pallet_hybrid_vm_port::Transaction,
     ) -> opaque::UncheckedExtrinsic {
         let extrinsic = UncheckedExtrinsic::new_unsigned(
-            pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+            pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
         );
         let encoded = extrinsic.encode();
         opaque::UncheckedExtrinsic::decode(&mut &encoded[..])
@@ -1483,9 +1483,9 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
         info: Self::SignedInfo,
     ) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
         match self {
-            call @ RuntimeCall::Ethereum(pallet_ethereum::Call::transact { .. }) => {
+            call @ RuntimeCall::Ethereum(pallet_hybrid_vm_port::Call::transact { .. }) => {
                 Some(call.dispatch(RuntimeOrigin::from(
-                    pallet_ethereum::RawOrigin::EthereumTransaction(info),
+                    pallet_hybrid_vm_port::RawOrigin::EthereumTransaction(info),
                 )))
             },
             _ => None,
@@ -1768,7 +1768,7 @@ impl_runtime_apis! {
                 Some(<Runtime as pallet_evm::Config>::ChainId::get()),
                 access_list.clone().unwrap_or_default(),
             );
-            let (weight_limit, proof_size_base_cost) = pallet_ethereum::Pallet::<Runtime>::transaction_weight(&transaction_data);
+            let (weight_limit, proof_size_base_cost) = pallet_hybrid_vm_port::Pallet::<Runtime>::transaction_weight(&transaction_data);
 
             <Runtime as pallet_evm::Config>::Runner::call(
                 from,
@@ -1819,7 +1819,7 @@ impl_runtime_apis! {
                 Some(<Runtime as pallet_evm::Config>::ChainId::get()),
                 access_list.clone().unwrap_or_default(),
             );
-            let (weight_limit, proof_size_base_cost) = pallet_ethereum::Pallet::<Runtime>::transaction_weight(&transaction_data);
+            let (weight_limit, proof_size_base_cost) = pallet_hybrid_vm_port::Pallet::<Runtime>::transaction_weight(&transaction_data);
 
             <Runtime as pallet_evm::Config>::Runner::create(
                 from,
@@ -1839,26 +1839,26 @@ impl_runtime_apis! {
         }
 
         fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
-            pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+            pallet_hybrid_vm_port::CurrentTransactionStatuses::<Runtime>::get()
         }
 
-        fn current_block() -> Option<pallet_ethereum::Block> {
-            pallet_ethereum::CurrentBlock::<Runtime>::get()
+        fn current_block() -> Option<pallet_hybrid_vm_port::Block> {
+            pallet_hybrid_vm_port::CurrentBlock::<Runtime>::get()
         }
 
-        fn current_receipts() -> Option<Vec<pallet_ethereum::Receipt>> {
-            pallet_ethereum::CurrentReceipts::<Runtime>::get()
+        fn current_receipts() -> Option<Vec<pallet_hybrid_vm_port::Receipt>> {
+            pallet_hybrid_vm_port::CurrentReceipts::<Runtime>::get()
         }
 
         fn current_all() -> (
-            Option<pallet_ethereum::Block>,
-            Option<Vec<pallet_ethereum::Receipt>>,
+            Option<pallet_hybrid_vm_port::Block>,
+            Option<Vec<pallet_hybrid_vm_port::Receipt>>,
             Option<Vec<TransactionStatus>>
         ) {
             (
-                pallet_ethereum::CurrentBlock::<Runtime>::get(),
-                pallet_ethereum::CurrentReceipts::<Runtime>::get(),
-                pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+                pallet_hybrid_vm_port::CurrentBlock::<Runtime>::get(),
+                pallet_hybrid_vm_port::CurrentReceipts::<Runtime>::get(),
+                pallet_hybrid_vm_port::CurrentTransactionStatuses::<Runtime>::get()
             )
         }
 
@@ -1879,7 +1879,7 @@ impl_runtime_apis! {
 
         fn pending_block(
             xts: Vec<<Block as BlockT>::Extrinsic>,
-        ) -> (Option<pallet_ethereum::Block>, Option<Vec<TransactionStatus>>) {
+        ) -> (Option<pallet_hybrid_vm_port::Block>, Option<Vec<TransactionStatus>>) {
             for ext in xts.into_iter() {
                 let _ = Executive::apply_extrinsic(ext);
             }
@@ -1887,8 +1887,8 @@ impl_runtime_apis! {
             Ethereum::on_finalize(System::block_number() + 1);
 
             (
-                pallet_ethereum::CurrentBlock::<Runtime>::get(),
-                pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+                pallet_hybrid_vm_port::CurrentBlock::<Runtime>::get(),
+                pallet_hybrid_vm_port::CurrentTransactionStatuses::<Runtime>::get()
             )
         }
     }
@@ -1896,7 +1896,7 @@ impl_runtime_apis! {
     impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
         fn convert_transaction(transaction: EthereumTransaction) -> <Block as BlockT>::Extrinsic {
             UncheckedExtrinsic::new_unsigned(
-                pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+                pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
             )
         }
     }
