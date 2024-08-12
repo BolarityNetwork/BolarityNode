@@ -12,20 +12,29 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 // Imports
-use parity_scale_codec::{Decode, Encode};
 use byte_slice_cast::AsByteSlice;
+use parity_scale_codec::{Decode, Encode};
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::{ByteArray, KeyTypeId},
     OpaqueMetadata, H160, H256, U256,
 };
-use sp_runtime::{create_runtime_str, curve::PiecewiseLinear, generic::{self, Era}, impl_opaque_keys, traits::{
-    self, AccountIdConversion, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
-    IdentifyAccount, IdentityLookup, NumberFor, One, OpaqueKeys, PostDispatchInfoOf,
-    SaturatedConversion, UniqueSaturatedInto, Verify,
-}, transaction_validity::{
-    TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
-}, ApplyExtrinsicResult, ConsensusEngineId, ExtrinsicInclusionMode, FixedU128, Perbill, Percent, Permill, DispatchError};
+use sp_runtime::{
+    create_runtime_str,
+    curve::PiecewiseLinear,
+    generic::{self, Era},
+    impl_opaque_keys,
+    traits::{
+        self, AccountIdConversion, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
+        IdentifyAccount, IdentityLookup, NumberFor, One, OpaqueKeys, PostDispatchInfoOf,
+        SaturatedConversion, UniqueSaturatedInto, Verify,
+    },
+    transaction_validity::{
+        TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
+    },
+    ApplyExtrinsicResult, ConsensusEngineId, DispatchError, ExtrinsicInclusionMode, FixedU128,
+    Perbill, Percent, Permill,
+};
 use sp_staking::currency_to_vote::U128CurrencyToVote;
 use sp_std::{marker::PhantomData, prelude::*};
 use sp_version::RuntimeVersion;
@@ -64,11 +73,14 @@ use fp_account::{AccountId20, EthereumSignature};
 use fp_evm::weight_per_gas;
 use fp_rpc::TransactionStatus;
 use frame_support::traits::EnsureOrigin;
+use pallet_evm::{
+    Account as EVMAccount, AddressMapping, EnsureAccountId20, FeeCalculator,
+    IdentityAddressMapping, Runner,
+};
 use pallet_hybrid_vm_port::{
     Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
     TransactionData,
 };
-use pallet_evm::{Account as EVMAccount, AddressMapping, EnsureAccountId20, FeeCalculator, IdentityAddressMapping, Runner};
 // other
 use static_assertions::const_assert;
 
@@ -77,14 +89,14 @@ use constants::{currency::*, time::*};
 use precompiles::FrontierPrecompiles;
 
 // A few exports that help ease life for downstream crates.
-pub use frame_system::{limits::BlockWeights, Call as SystemCall, EnsureRoot, EnsureSigned};
 use frame_system::Config;
+pub use frame_system::{limits::BlockWeights, Call as SystemCall, EnsureRoot, EnsureSigned};
+use hp_system::{AccountIdMapping, U256BalanceMapping};
 pub use pallet_balances::Call as BalancesCall;
-use pallet_contracts::chain_extension::{Ext, InitState, RetVal};
 use pallet_contracts::chain_extension::Environment;
+use pallet_contracts::chain_extension::{Ext, InitState, RetVal};
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::Multiplier;
-use hp_system::{AccountIdMapping, U256BalanceMapping};
 
 #[cfg(any(feature = "std", test))]
 pub use pallet_staking::StakerStatus;
@@ -309,9 +321,9 @@ impl pallet_babe::Config for Runtime {
     type MaxAuthorities = MaxAuthorities;
     type MaxNominators = MaxNominators;
     type KeyOwnerProof =
-    <Historical as KeyOwnerProofSystem<(KeyTypeId, pallet_babe::AuthorityId)>>::Proof;
+        <Historical as KeyOwnerProofSystem<(KeyTypeId, pallet_babe::AuthorityId)>>::Proof;
     type EquivocationReportSystem =
-    pallet_babe::EquivocationReportSystem<Self, Offences, Historical, ReportLongevity>;
+        pallet_babe::EquivocationReportSystem<Self, Offences, Historical, ReportLongevity>;
 }
 
 impl pallet_grandpa::Config for Runtime {
@@ -486,7 +498,7 @@ impl pallet_contracts::chain_extension::ChainExtension<Runtime> for HybridVMChai
     fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
     where
         E: Ext<T = Runtime>,
-    // <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+        // <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
     {
         let func_id = env.func_id();
         match func_id {
@@ -504,7 +516,8 @@ pub fn h160_to_accountid<E: Ext<T = Runtime>>(
 ) -> Result<RetVal, DispatchError> {
     let mut envbuf = env.buf_in_buf_out();
     let input: H160 = envbuf.read_as()?;
-    let account_id: AccountId20 = <Runtime as pallet_evm::Config>::AddressMapping::into_account_id(input);
+    let account_id: AccountId20 =
+        <Runtime as pallet_evm::Config>::AddressMapping::into_account_id(input);
     let account_id_slice = account_id.encode();
     let output = envbuf
         .write(&account_id_slice, false, None)
@@ -516,13 +529,13 @@ pub fn h160_to_accountid<E: Ext<T = Runtime>>(
 }
 
 parameter_types! {
-	pub UploadAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
-	pub InstantiateAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
+    pub UploadAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
+    pub InstantiateAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
 }
 
 pub struct EnsureAccount<T, A>(sp_std::marker::PhantomData<(T, A)>);
 impl<T: Config, A: sp_core::Get<Option<AccountId20>>>
-EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
+    EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
 where
     <T as frame_system::Config>::AccountId: From<AccountId20>,
 {
@@ -844,26 +857,26 @@ impl pallet_democracy::Config for Runtime {
     type MinimumDeposit = MinimumDeposit;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin =
-    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
     /// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
     type ExternalMajorityOrigin =
-    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
     /// A unanimous council can have the next scheduled referendum be a straight default-carries
     /// (NTB) vote.
     type ExternalDefaultOrigin =
-    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
     type SubmitOrigin = EnsureSigned<AccountId>;
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin =
-    pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
     type InstantOrigin =
-    pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
     type InstantAllowed = ConstBool<true>;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
     type CancellationOrigin =
-    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
     // Root must agree.
     type CancelProposalOrigin = EitherOfDiverse<
@@ -1327,9 +1340,9 @@ impl Get<Option<U256>> for GasPrice {
 }
 
 parameter_types! {
-	pub const EnableCallEVM: bool = true;
-	pub const EnableCallWasmVM: bool = true;
-	pub const GasLimit: u64 = 10_000_000u64;
+    pub const EnableCallEVM: bool = true;
+    pub const EnableCallWasmVM: bool = true;
+    pub const GasLimit: u64 = 10_000_000u64;
 }
 
 impl U256BalanceMapping for Runtime {
@@ -1412,7 +1425,10 @@ construct_runtime!(
 pub struct TransactionConverter;
 
 impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
-    fn convert_transaction(&self, transaction: pallet_hybrid_vm_port::Transaction) -> UncheckedExtrinsic {
+    fn convert_transaction(
+        &self,
+        transaction: pallet_hybrid_vm_port::Transaction,
+    ) -> UncheckedExtrinsic {
         UncheckedExtrinsic::new_unsigned(
             pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
         )
@@ -1456,10 +1472,10 @@ pub type SignedExtra = (
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-fp_self_contained::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+    fp_self_contained::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic =
-fp_self_contained::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra, H160>;
+    fp_self_contained::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra, H160>;
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Executive: handles dispatch to the various modules.

@@ -20,23 +20,23 @@
 // Modified by Alex Wang 2024
 
 use frame_support::{
-	assert_err, assert_ok, dispatch::GetDispatchInfo, unsigned::TransactionValidityError,
-	weights::Weight,
+    assert_err, assert_ok, dispatch::GetDispatchInfo, unsigned::TransactionValidityError,
+    weights::Weight,
 };
 use sp_runtime::{
-	traits::Applyable,
-	transaction_validity::{InvalidTransaction, ValidTransactionBuilder},
+    traits::Applyable,
+    transaction_validity::{InvalidTransaction, ValidTransactionBuilder},
 };
 use std::str::FromStr;
 
 use crate::{
-	mock::*, CallOrCreateInfo, Event, RawOrigin, Transaction, TransactionAction, H160, H256, U256,
+    mock::*, CallOrCreateInfo, Event, RawOrigin, Transaction, TransactionAction, H160, H256, U256,
 };
 use fp_self_contained::CheckedExtrinsic;
 
 use sp_runtime::{
-	codec::{Decode, Encode},
-	traits::{BlakeTwo256, Hash},
+    codec::{Decode, Encode},
+    traits::{BlakeTwo256, Hash},
 };
 use std::{error::Error, fs::File, io::Read};
 
@@ -68,31 +68,31 @@ const GAS_LIMIT: u64 = 10_000_000u64;
 const WEIGHT_LIMIT: Weight = Weight::from_parts(1_000_000_000_000, u64::MAX);
 
 fn read_a_file(filename: &str) -> std::io::Result<Vec<u8>> {
-	let mut file = File::open(filename)?;
+    let mut file = File::open(filename)?;
 
-	let mut data = Vec::new();
-	file.read_to_end(&mut data)?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
 
-	return Ok(data);
+    return Ok(data);
 }
 
 fn contract_module<T>(
-	contract_name: &str,
-	wasmtype: bool,
+    contract_name: &str,
+    wasmtype: bool,
 ) -> Result<(Vec<u8>, <T::Hashing as Hash>::Output), Box<dyn Error>>
 where
-	T: frame_system::Config,
+    T: frame_system::Config,
 {
-	let contract_path = ["../hybrid-vm/fixtures/", contract_name].concat();
-	let contract_binary: Vec<u8>;
+    let contract_path = ["../hybrid-vm/fixtures/", contract_name].concat();
+    let contract_binary: Vec<u8>;
 
-	if wasmtype {
-		contract_binary = read_a_file(&contract_path)?;
-	} else {
-		let bytecode = read_a_file(&contract_path)?;
-		contract_binary = hex::decode(bytecode)?;
-	}
+    if wasmtype {
+        contract_binary = read_a_file(&contract_path)?;
+    } else {
+        let bytecode = read_a_file(&contract_path)?;
+        contract_binary = hex::decode(bytecode)?;
+    }
 
-	let code_hash = T::Hashing::hash(&contract_binary);
-	Ok((contract_binary, code_hash))
+    let code_hash = T::Hashing::hash(&contract_binary);
+    Ok((contract_binary, code_hash))
 }
