@@ -10,6 +10,8 @@ use pallet_evm_precompile_dispatch::{Dispatch, DispatchValidateT};
 use pallet_evm_precompile_modexp::Modexp;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
 use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripemd160, Sha256};
+use hp_system::EvmHybridVMExtension;
+use pallet_evm_precompile_call_hybrid_vm::CallHybridVM;
 
 use crate::*;
 
@@ -22,13 +24,13 @@ where
     pub fn new() -> Self {
         Self(Default::default())
     }
-    pub fn used_addresses() -> [H160; 8] {
-        [hash(1), hash(2), hash(3), hash(4), hash(5), hash(1024), hash(1025), hash(1026)]
+    pub fn used_addresses() -> [H160; 9] {
+        [hash(1), hash(2), hash(3), hash(4), hash(5), hash(100), hash(1024), hash(1025), hash(1026)]
     }
 }
 impl<R> PrecompileSet for FrontierPrecompiles<R>
 where
-    R: pallet_evm::Config,
+    R: pallet_evm::Config + EvmHybridVMExtension<R>,
 {
     fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
         match handle.code_address() {
@@ -38,6 +40,8 @@ where
             a if a == hash(3) => Some(Ripemd160::execute(handle)),
             a if a == hash(4) => Some(Identity::execute(handle)),
             a if a == hash(5) => Some(Modexp::execute(handle)),
+            // Hybrid VM precompiles :
+            a if a == hash(100) => Some(CallHybridVM::<R>::execute(handle)),
             // Non-Frontier specific nor Ethereum precompiles :
             a if a == hash(1024) => Some(Sha3FIPS256::execute(handle)),
             a if a == hash(1025) => Some(ECRecoverPublicKey::execute(handle)),

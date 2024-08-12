@@ -166,7 +166,7 @@ where
             a if a == hash(2) => Some(Sha256::execute(handle)),
             a if a == hash(3) => Some(Ripemd160::execute(handle)),
             a if a == hash(4) => Some(Identity::execute(handle)),
-            a if a == hash(5) => {
+            a if a == hash(100) => {
                 Some(pallet_evm_precompile_call_hybrid_vm::CallHybridVM::<T>::execute(handle))
             },
             _ => None,
@@ -428,12 +428,12 @@ impl pallet_hybrid_vm::Config for Test {
 const A: [u8; 32] = [
     1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7,
 ];
-const B: [u8; 32] = [
-    2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8,
-];
+// const B: [u8; 32] = [
+//     2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8,
+// ];
 
 pub const ALICE: AccountId = AccountId::new(A);
-pub const BOB: AccountId = AccountId::new(B);
+// pub const BOB: AccountId = AccountId::new(B);
 
 const A_SHADOW: [u8; 32] = [
     1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

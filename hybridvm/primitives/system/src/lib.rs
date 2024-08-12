@@ -18,7 +18,6 @@
 use frame_support::traits::tokens::Balance;
 use frame_system::pallet_prelude::*;
 use sp_core::{H160, U256};
-use sp_runtime::AccountId32;
 use sp_std::vec::Vec;
 
 pub trait EvmHybridVMExtension<C: frame_system::Config> {

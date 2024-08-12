@@ -46,8 +46,9 @@ pallet-timestamp = { workspace = true, features = ["default"] }
 sp-core = { workspace = true, features = ["default"] }
 sp-std = { workspace = true, features = ["default"] }
 # Frontier
-fp-account = { workspace = true, default-features = false }
 fp-self-contained = { workspace = true, features = ["default"] }
+# ink
+ink_env = { workspace = true, default-features = false, features = ["no-panic-handler", "no-allocator"] }
 
 [features]
 default = ["std"]

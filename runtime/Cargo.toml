@@ -91,6 +91,7 @@ pallet-hotfix-sufficients = { workspace = true }
 
 # Local Pallet
 pallet-template = { path = "../pallets/template", default-features = false }
+pallet-evm-precompile-call-hybrid-vm = { workspace = true, default-features = false }
 pallet-hybrid-vm = { workspace = true, default-features = false }
 pallet-hybrid-vm-port = { workspace = true, default-features = false }
 hp-system = { workspace = true, default-features = false}
@@ -176,6 +177,7 @@ std = [
     "pallet-evm/std",
     "pallet-hotfix-sufficients/std",
     # Local Pallet
+    "pallet-evm-precompile-call-hybrid-vm/std",
     "pallet-hybrid-vm/std",
     "pallet-hybrid-vm-port/std",
 ]

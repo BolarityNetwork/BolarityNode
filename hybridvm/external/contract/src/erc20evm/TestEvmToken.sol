@@ -32,7 +32,7 @@ contract TestEvmToken is ERC20 {
 		bytes memory outbytes = new bytes(1024);
 		uint gasdata = gasleft();
 		assembly {
-			if iszero(delegatecall(gasdata, 0x05, input, inputLen, outbytes, 1024)) {
+			if iszero(delegatecall(gasdata, 0x64, input, inputLen, outbytes, 1024)) {
 				revert(0,0)
 			}
 		}
