@@ -13,27 +13,19 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 // Imports
 use parity_scale_codec::{Decode, Encode};
+use byte_slice_cast::AsByteSlice;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::{ByteArray, KeyTypeId},
     OpaqueMetadata, H160, H256, U256,
 };
-use sp_runtime::{
-    create_runtime_str,
-    curve::PiecewiseLinear,
-    generic::{self, Era},
-    impl_opaque_keys,
-    traits::{
-        self, AccountIdConversion, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
-        IdentifyAccount, IdentityLookup, NumberFor, One, OpaqueKeys, PostDispatchInfoOf,
-        SaturatedConversion, UniqueSaturatedInto, Verify,
-    },
-    transaction_validity::{
-        TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
-    },
-    ApplyExtrinsicResult, ConsensusEngineId, ExtrinsicInclusionMode, FixedU128, Perbill, Percent,
-    Permill,
-};
+use sp_runtime::{create_runtime_str, curve::PiecewiseLinear, generic::{self, Era}, impl_opaque_keys, traits::{
+    self, AccountIdConversion, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
+    IdentifyAccount, IdentityLookup, NumberFor, One, OpaqueKeys, PostDispatchInfoOf,
+    SaturatedConversion, UniqueSaturatedInto, Verify,
+}, transaction_validity::{
+    TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
+}, ApplyExtrinsicResult, ConsensusEngineId, ExtrinsicInclusionMode, FixedU128, Perbill, Percent, Permill, DispatchError};
 use sp_staking::currency_to_vote::U128CurrencyToVote;
 use sp_std::{marker::PhantomData, prelude::*};
 use sp_version::RuntimeVersion;
@@ -68,16 +60,15 @@ use pallet_grandpa::AuthorityId as GrandpaId;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter};
 // Frontier
-use fp_account::EthereumSignature;
+use fp_account::{AccountId20, EthereumSignature};
 use fp_evm::weight_per_gas;
 use fp_rpc::TransactionStatus;
-use pallet_ethereum::{
+use frame_support::traits::EnsureOrigin;
+use pallet_hybrid_vm_port::{
     Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
     TransactionData,
 };
-use pallet_evm::{
-    Account as EVMAccount, EnsureAccountId20, FeeCalculator, IdentityAddressMapping, Runner,
-};
+use pallet_evm::{Account as EVMAccount, AddressMapping, EnsureAccountId20, FeeCalculator, IdentityAddressMapping, Runner};
 // other
 use static_assertions::const_assert;
 
@@ -87,9 +78,13 @@ use precompiles::FrontierPrecompiles;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_system::{limits::BlockWeights, Call as SystemCall, EnsureRoot, EnsureSigned};
+use frame_system::Config;
 pub use pallet_balances::Call as BalancesCall;
+use pallet_contracts::chain_extension::{Ext, InitState, RetVal};
+use pallet_contracts::chain_extension::Environment;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::Multiplier;
+use hp_system::{AccountIdMapping, U256BalanceMapping};
 
 #[cfg(any(feature = "std", test))]
 pub use pallet_staking::StakerStatus;
@@ -314,9 +309,9 @@ impl pallet_babe::Config for Runtime {
     type MaxAuthorities = MaxAuthorities;
     type MaxNominators = MaxNominators;
     type KeyOwnerProof =
-        <Historical as KeyOwnerProofSystem<(KeyTypeId, pallet_babe::AuthorityId)>>::Proof;
+    <Historical as KeyOwnerProofSystem<(KeyTypeId, pallet_babe::AuthorityId)>>::Proof;
     type EquivocationReportSystem =
-        pallet_babe::EquivocationReportSystem<Self, Offences, Historical, ReportLongevity>;
+    pallet_babe::EquivocationReportSystem<Self, Offences, Historical, ReportLongevity>;
 }
 
 impl pallet_grandpa::Config for Runtime {
@@ -484,6 +479,70 @@ parameter_types! {
     pub const MaxDelegateDependencies: u32 = 32;
 }
 
+#[derive(Default)]
+pub struct HybridVMChainExtension;
+
+impl pallet_contracts::chain_extension::ChainExtension<Runtime> for HybridVMChainExtension {
+    fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
+    where
+        E: Ext<T = Runtime>,
+    // <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+    {
+        let func_id = env.func_id();
+        match func_id {
+            //fn call_evm_extension(vm_input: Vec<u8>) -> String;
+            5 => HybridVM::call_evm::<E>(env),
+            //fn h160_to_accountid(evm_address: H160) -> AccountId;
+            6 => h160_to_accountid::<E>(env),
+            _ => Err(DispatchError::from("Passed unknown func_id to chain extension")),
+        }
+    }
+}
+
+pub fn h160_to_accountid<E: Ext<T = Runtime>>(
+    env: Environment<E, InitState>,
+) -> Result<RetVal, DispatchError> {
+    let mut envbuf = env.buf_in_buf_out();
+    let input: H160 = envbuf.read_as()?;
+    let account_id: AccountId20 = <Runtime as pallet_evm::Config>::AddressMapping::into_account_id(input);
+    let account_id_slice = account_id.encode();
+    let output = envbuf
+        .write(&account_id_slice, false, None)
+        .map_err(|_| DispatchError::from("ChainExtension failed to write result"));
+    match output {
+        Ok(_) => return Ok(RetVal::Converging(0)),
+        Err(e) => return Err(e),
+    }
+}
+
+parameter_types! {
+	pub UploadAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
+	pub InstantiateAccount: Option<<Runtime as frame_system::Config>::AccountId> = None;
+}
+
+pub struct EnsureAccount<T, A>(sp_std::marker::PhantomData<(T, A)>);
+impl<T: Config, A: sp_core::Get<Option<AccountId20>>>
+EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
+where
+    <T as frame_system::Config>::AccountId: From<AccountId20>,
+{
+    type Success = T::AccountId;
+
+    fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
+        let who = <frame_system::EnsureSigned<_> as EnsureOrigin<_>>::try_origin(o.clone())?;
+        if matches!(A::get(), Some(a) if who != a.clone().into()) {
+            return Err(o);
+        }
+
+        Ok(who)
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
+        Err(())
+    }
+}
+
 impl pallet_contracts::Config for Runtime {
     type Time = Timestamp;
     type Randomness = RandomnessCollectiveFlip;
@@ -496,7 +555,7 @@ impl pallet_contracts::Config for Runtime {
     type CallStack = [pallet_contracts::Frame<Self>; 23];
     type WeightPrice = pallet_transaction_payment::Pallet<Self>;
     type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-    type ChainExtension = ();
+    type ChainExtension = HybridVMChainExtension;
     type Schedule = Schedule;
     type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
     type MaxCodeLen = ConstU32<{ 256 * 1024 }>;
@@ -512,8 +571,8 @@ impl pallet_contracts::Config for Runtime {
     type Migrations = ();
     type Xcm = ();
     type ApiVersion = ();
-    type UploadOrigin = EnsureSigned<AccountId>;
-    type InstantiateOrigin = EnsureSigned<AccountId>;
+    type UploadOrigin = EnsureAccount<Self, UploadAccount>;
+    type InstantiateOrigin = EnsureAccount<Self, InstantiateAccount>;
 }
 
 // election provider
@@ -630,17 +689,17 @@ impl pallet_election_provider_multi_phase::MinerConfig for Runtime {
     type MaxWeight = MinerMaxWeight;
     type Solution = NposSolution16;
     type MaxVotesPerVoter =
-	<<Self as pallet_election_provider_multi_phase::Config>::DataProvider as ElectionDataProvider>::MaxVotesPerVoter;
+    <<Self as pallet_election_provider_multi_phase::Config>::DataProvider as ElectionDataProvider>::MaxVotesPerVoter;
     type MaxWinners = MaxActiveValidators;
 
     // The unsigned submissions have to respect the weight of the submit_unsigned call, thus their
     // weight estimate function is wired to this call's weight.
     fn solution_weight(v: u32, t: u32, a: u32, d: u32) -> Weight {
         <
-			<Self as pallet_election_provider_multi_phase::Config>::WeightInfo
-			as
-			pallet_election_provider_multi_phase::WeightInfo
-		>::submit_unsigned(v, t, a, d)
+        <Self as pallet_election_provider_multi_phase::Config>::WeightInfo
+        as
+        pallet_election_provider_multi_phase::WeightInfo
+        >::submit_unsigned(v, t, a, d)
     }
 }
 
@@ -785,26 +844,26 @@ impl pallet_democracy::Config for Runtime {
     type MinimumDeposit = MinimumDeposit;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
     /// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
     type ExternalMajorityOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
     /// A unanimous council can have the next scheduled referendum be a straight default-carries
     /// (NTB) vote.
     type ExternalDefaultOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
     type SubmitOrigin = EnsureSigned<AccountId>;
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
+    pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
     type InstantOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
+    pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
     type InstantAllowed = ConstBool<true>;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
     type CancellationOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
     // Root must agree.
     type CancelProposalOrigin = EitherOfDiverse<
@@ -1180,7 +1239,7 @@ impl pallet_evm::Config for Runtime {
     type FeeCalculator = BaseFee;
     type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
     type WeightPerGas = WeightPerGas;
-    type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
+    type BlockHashMapping = pallet_hybrid_vm_port::EthereumBlockHashMapping<Self>;
     type CallOrigin = EnsureAccountId20;
     type WithdrawOrigin = EnsureAccountId20;
     type AddressMapping = IdentityAddressMapping;
@@ -1205,9 +1264,9 @@ parameter_types! {
     pub const PostBlockAndTxnHashes: PostLogContent = PostLogContent::BlockAndTxnHashes;
 }
 
-impl pallet_ethereum::Config for Runtime {
+impl pallet_hybrid_vm_port::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
+    type StateRoot = pallet_hybrid_vm_port::IntermediateStateRoot<Self>;
     type PostLogContent = PostBlockAndTxnHashes;
     type ExtraDataLength = ConstU32<30>;
 }
@@ -1260,6 +1319,46 @@ impl pallet_template::Config for Runtime {
     type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
+pub struct GasPrice;
+impl Get<Option<U256>> for GasPrice {
+    fn get() -> Option<U256> {
+        Some(U256::from(100_000_000_000u64))
+    }
+}
+
+parameter_types! {
+	pub const EnableCallEVM: bool = true;
+	pub const EnableCallWasmVM: bool = true;
+	pub const GasLimit: u64 = 10_000_000u64;
+}
+
+impl U256BalanceMapping for Runtime {
+    type Balance = Balance;
+    fn u256_to_balance(value: U256) -> Result<Self::Balance, &'static str> {
+        Self::Balance::try_from(value)
+    }
+}
+
+impl AccountIdMapping<Runtime> for Runtime {
+    fn into_address(account_id: <Runtime as frame_system::Config>::AccountId) -> H160 {
+        let mut address_arr = [0u8; 32];
+        address_arr[0..32].copy_from_slice(account_id.as_byte_slice());
+
+        H160::from_slice(&address_arr[0..20])
+    }
+}
+
+impl pallet_hybrid_vm::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type U256BalanceMapping = Self;
+    type AccountIdMapping = Self;
+    type EnableCallEVM = EnableCallEVM;
+    type EnableCallWasmVM = EnableCallWasmVM;
+    type GasLimit = GasLimit;
+    type GasPrice = GasPrice;
+}
+
 // Construct runtime
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -1272,7 +1371,7 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment,
         Sudo: pallet_sudo,
         Treasury: pallet_treasury,
-        Ethereum: pallet_ethereum,
+        Ethereum: pallet_hybrid_vm_port,
         // Authorship must be before session in order to note author in the correct session and era
         // for im-online and staking.
         Authorship: pallet_authorship,
@@ -1305,6 +1404,7 @@ construct_runtime!(
         Contracts: pallet_contracts,
 
         TemplateModule: pallet_template,
+        HybridVM: pallet_hybrid_vm,
     }
 );
 
@@ -1312,9 +1412,9 @@ construct_runtime!(
 pub struct TransactionConverter;
 
 impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
-    fn convert_transaction(&self, transaction: pallet_ethereum::Transaction) -> UncheckedExtrinsic {
+    fn convert_transaction(&self, transaction: pallet_hybrid_vm_port::Transaction) -> UncheckedExtrinsic {
         UncheckedExtrinsic::new_unsigned(
-            pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+            pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
         )
     }
 }
@@ -1322,10 +1422,10 @@ impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
 impl fp_rpc::ConvertTransaction<opaque::UncheckedExtrinsic> for TransactionConverter {
     fn convert_transaction(
         &self,
-        transaction: pallet_ethereum::Transaction,
+        transaction: pallet_hybrid_vm_port::Transaction,
     ) -> opaque::UncheckedExtrinsic {
         let extrinsic = UncheckedExtrinsic::new_unsigned(
-            pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+            pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
         );
         let encoded = extrinsic.encode();
         opaque::UncheckedExtrinsic::decode(&mut &encoded[..])
@@ -1356,10 +1456,10 @@ pub type SignedExtra = (
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-    fp_self_contained::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+fp_self_contained::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic =
-    fp_self_contained::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra, H160>;
+fp_self_contained::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra, H160>;
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
@@ -1425,9 +1525,9 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
         info: Self::SignedInfo,
     ) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
         match self {
-            call @ RuntimeCall::Ethereum(pallet_ethereum::Call::transact { .. }) => {
+            call @ RuntimeCall::Ethereum(pallet_hybrid_vm_port::Call::transact { .. }) => {
                 Some(call.dispatch(RuntimeOrigin::from(
-                    pallet_ethereum::RawOrigin::EthereumTransaction(info),
+                    pallet_hybrid_vm_port::RawOrigin::EthereumTransaction(info),
                 )))
             },
             _ => None,
@@ -1710,7 +1810,7 @@ impl_runtime_apis! {
                 Some(<Runtime as pallet_evm::Config>::ChainId::get()),
                 access_list.clone().unwrap_or_default(),
             );
-            let (weight_limit, proof_size_base_cost) = pallet_ethereum::Pallet::<Runtime>::transaction_weight(&transaction_data);
+            let (weight_limit, proof_size_base_cost) = pallet_hybrid_vm_port::Pallet::<Runtime>::transaction_weight(&transaction_data);
 
             <Runtime as pallet_evm::Config>::Runner::call(
                 from,
@@ -1761,7 +1861,7 @@ impl_runtime_apis! {
                 Some(<Runtime as pallet_evm::Config>::ChainId::get()),
                 access_list.clone().unwrap_or_default(),
             );
-            let (weight_limit, proof_size_base_cost) = pallet_ethereum::Pallet::<Runtime>::transaction_weight(&transaction_data);
+            let (weight_limit, proof_size_base_cost) = pallet_hybrid_vm_port::Pallet::<Runtime>::transaction_weight(&transaction_data);
 
             <Runtime as pallet_evm::Config>::Runner::create(
                 from,
@@ -1781,26 +1881,26 @@ impl_runtime_apis! {
         }
 
         fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
-            pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+            pallet_hybrid_vm_port::CurrentTransactionStatuses::<Runtime>::get()
         }
 
-        fn current_block() -> Option<pallet_ethereum::Block> {
-            pallet_ethereum::CurrentBlock::<Runtime>::get()
+        fn current_block() -> Option<pallet_hybrid_vm_port::Block> {
+            pallet_hybrid_vm_port::CurrentBlock::<Runtime>::get()
         }
 
-        fn current_receipts() -> Option<Vec<pallet_ethereum::Receipt>> {
-            pallet_ethereum::CurrentReceipts::<Runtime>::get()
+        fn current_receipts() -> Option<Vec<pallet_hybrid_vm_port::Receipt>> {
+            pallet_hybrid_vm_port::CurrentReceipts::<Runtime>::get()
         }
 
         fn current_all() -> (
-            Option<pallet_ethereum::Block>,
-            Option<Vec<pallet_ethereum::Receipt>>,
+            Option<pallet_hybrid_vm_port::Block>,
+            Option<Vec<pallet_hybrid_vm_port::Receipt>>,
             Option<Vec<TransactionStatus>>
         ) {
             (
-                pallet_ethereum::CurrentBlock::<Runtime>::get(),
-                pallet_ethereum::CurrentReceipts::<Runtime>::get(),
-                pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+                pallet_hybrid_vm_port::CurrentBlock::<Runtime>::get(),
+                pallet_hybrid_vm_port::CurrentReceipts::<Runtime>::get(),
+                pallet_hybrid_vm_port::CurrentTransactionStatuses::<Runtime>::get()
             )
         }
 
@@ -1821,7 +1921,7 @@ impl_runtime_apis! {
 
         fn pending_block(
             xts: Vec<<Block as BlockT>::Extrinsic>,
-        ) -> (Option<pallet_ethereum::Block>, Option<Vec<TransactionStatus>>) {
+        ) -> (Option<pallet_hybrid_vm_port::Block>, Option<Vec<TransactionStatus>>) {
             for ext in xts.into_iter() {
                 let _ = Executive::apply_extrinsic(ext);
             }
@@ -1829,8 +1929,8 @@ impl_runtime_apis! {
             Ethereum::on_finalize(System::block_number() + 1);
 
             (
-                pallet_ethereum::CurrentBlock::<Runtime>::get(),
-                pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+                pallet_hybrid_vm_port::CurrentBlock::<Runtime>::get(),
+                pallet_hybrid_vm_port::CurrentTransactionStatuses::<Runtime>::get()
             )
         }
     }
@@ -1838,7 +1938,7 @@ impl_runtime_apis! {
     impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
         fn convert_transaction(transaction: EthereumTransaction) -> <Block as BlockT>::Extrinsic {
             UncheckedExtrinsic::new_unsigned(
-                pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+                pallet_hybrid_vm_port::Call::<Runtime>::transact { transaction }.into(),
             )
         }
     }

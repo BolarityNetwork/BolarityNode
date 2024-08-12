@@ -37,8 +37,3 @@ pub trait U256BalanceMapping {
 pub trait AccountIdMapping<C: frame_system::Config> {
 	fn into_address(account_id: C::AccountId) -> H160;
 }
-
-pub trait AccountId32Mapping<C: frame_system::Config> {
-	fn id32_to_id(id32: AccountId32) -> C::AccountId;
-	fn id_to_id32(account_id: C::AccountId) -> AccountId32;
-}
