@@ -10,6 +10,7 @@ repository = { workspace = true }
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+byte-slice-cast= { workspace = true, default-features = false }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
@@ -90,6 +91,9 @@ pallet-hotfix-sufficients = { workspace = true }
 
 # Local Pallet
 pallet-template = { path = "../pallets/template", default-features = false }
+pallet-hybrid-vm = { workspace = true, default-features = false }
+pallet-hybrid-vm-port = { workspace = true, default-features = false }
+hp-system = { workspace = true, default-features = false}
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -171,6 +175,9 @@ std = [
     "pallet-evm-precompile-simple/std",
     "pallet-evm/std",
     "pallet-hotfix-sufficients/std",
+    # Local Pallet
+    "pallet-hybrid-vm/std",
+    "pallet-hybrid-vm-port/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
@@ -185,4 +192,5 @@ runtime-benchmarks = [
     "pallet-contracts/runtime-benchmarks",
     "pallet-sudo/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+    "pallet-hybrid-vm-port/runtime-benchmarks",
 ]
