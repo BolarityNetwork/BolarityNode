@@ -20,11 +20,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
+mod primitives;
+
 use ink_env::Environment;
 use ink_prelude::string::String;
 use ink_prelude::vec::Vec;
 
-type AccountId = <ink_env::DefaultEnvironment as Environment>::AccountId;
+type AccountId = primitives::AccountId;
 #[ink::chain_extension( extension = 0 )]
 pub trait MyChainExtension {
         type ErrorCode = i32;
@@ -42,7 +44,7 @@ impl Environment for CustomEnvironment {
     const MAX_EVENT_TOPICS: usize =
         <ink_env::DefaultEnvironment as Environment>::MAX_EVENT_TOPICS;
 
-    type AccountId = <ink_env::DefaultEnvironment as Environment>::AccountId;
+    type AccountId = AccountId;
     type Balance = <ink_env::DefaultEnvironment as Environment>::Balance;
     type Hash = <ink_env::DefaultEnvironment as Environment>::Hash;
     type BlockNumber = <ink_env::DefaultEnvironment as Environment>::BlockNumber;
