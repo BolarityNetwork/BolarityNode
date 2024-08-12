@@ -1371,8 +1371,8 @@ impl U256BalanceMapping for Runtime {
 
 impl AccountIdMapping<Runtime> for Runtime {
     fn into_address(account_id: <Runtime as frame_system::Config>::AccountId) -> H160 {
-        let mut address_arr = [0u8; 32];
-        address_arr[0..32].copy_from_slice(account_id.as_byte_slice());
+        let mut address_arr = [0u8; 20];
+        address_arr[0..20].copy_from_slice(account_id.as_byte_slice());
 
         H160::from_slice(&address_arr[0..20])
     }

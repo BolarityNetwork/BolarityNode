@@ -58,8 +58,6 @@ impl Environment for CustomEnvironment {
 
 #[ink::contract(env = crate::CustomEnvironment)]
 mod erc20 {
-    //#[cfg(not(feature = "ink-as-dependency"))]
-    use ink::storage::Lazy;
 	use ink::storage::Mapping as StorageHashMap;
 	
     use ink_prelude::string::String;
