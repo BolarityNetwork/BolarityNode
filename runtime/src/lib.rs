@@ -70,14 +70,11 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter};
 // Frontier
 use fp_account::{AccountId20, EthereumSignature};
-use fp_evm::weight_per_gas;
+use fp_evm::{CallOrCreateInfo, weight_per_gas};
 use fp_rpc::TransactionStatus;
 use frame_support::traits::EnsureOrigin;
 use pallet_evm::{Account as EVMAccount, AddressMapping, EnsureAccountId20, FeeCalculator, GasWeightMapping, IdentityAddressMapping, Runner};
-use pallet_hybrid_vm_port::{
-    Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
-    TransactionData,
-};
+use pallet_hybrid_vm_port::{Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction, TransactionData};
 // other
 use static_assertions::const_assert;
 
@@ -1844,6 +1841,16 @@ impl_runtime_apis! {
                 access_list.clone().unwrap_or_default(),
             );
             let (weight_limit, proof_size_base_cost) = pallet_hybrid_vm_port::Pallet::<Runtime>::transaction_weight(&transaction_data);
+
+            if pallet_hybrid_vm::HvmContracts::<Runtime>::contains_key(to) {
+                return match pallet_hybrid_vm_port::Pallet::<Runtime>::call_hybrid_vm(from, transaction_data) {
+                    Ok(r) => match r.1 {
+                        CallOrCreateInfo::Call(c) => Ok(c),
+                        _ => Err(DispatchError::Other("Error: not evm CallInfo!")),
+                    }
+                    Err(e) => Err(e.error),
+                };
+            }
 
             <Runtime as pallet_evm::Config>::Runner::call(
                 from,
