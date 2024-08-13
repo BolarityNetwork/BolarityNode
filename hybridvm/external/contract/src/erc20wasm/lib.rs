@@ -154,6 +154,9 @@ mod erc20 {
         #[ink(message)]
         pub fn hybridvm_evm_abi(&mut self) -> Vec<EvmABI> {
 			let mut evm_abi: Vec<EvmABI> = vec![];
+            evm_abi.push(("name()returns(string)".to_string(), "name".to_string(), None));
+            evm_abi.push(("symbol()returns(string)".to_string(), "symbol".to_string(), None));
+            evm_abi.push(("decimals()returns(uint8)".to_string(), "decimals".to_string(), None));
 			evm_abi.push(("total_supply()returns(uint128)".to_string(), "total_supply".to_string(), None));			
 			evm_abi.push(("balanceOf(address)returns(uint128)".to_string(), "balance_of".to_string(), None));
 			evm_abi.push(("allowance(address,address)returns(uint128)".to_string(), "allowance".to_string(), None));
@@ -163,7 +166,22 @@ mod erc20 {
 			evm_abi.push(("transfer_from_to(address,address,uint128)returns(bool,string)".to_string(), "transfer_from_to_abi".to_string(), None));
 			
 			evm_abi
-        }		
+        }
+
+        #[ink(message)]
+        pub fn name(&self) -> String {
+            String::from("WasmTokenT")
+        }
+
+        #[ink(message)]
+        pub fn symbol(&self) -> String {
+            String::from("WTT")
+        }
+
+        #[ink(message)]
+        pub fn decimals(&self) -> u8 {
+            18u8
+        }
 
         /// Returns the total token supply.
         #[ink(message)]

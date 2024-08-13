@@ -221,7 +221,7 @@ impl<T: Config> Pallet<T> {
     pub fn call_hybrid_vm(
         source: H160,
         t: TransactionData,
-    ) -> Result<(PostDispatchInfo, CallOrCreateInfo), DispatchErrorWithPostInfo> {
+    ) -> Result<(Option<H160>, Option<H160>, CallOrCreateInfo), DispatchErrorWithPostInfo> {
         let (
             input,
             value,
@@ -349,10 +349,8 @@ impl<T: Config> Pallet<T> {
 								        logs: vec![],
 							        };
                                     return Ok((
-                                        PostDispatchInfo {
-                                            actual_weight: Some(info.gas_consumed),
-                                            pays_fee: Pays::Yes,
-                                        },
+                                        Some(target),
+                                        None,
                                         CallOrCreateInfo::Call(call_info),
                                     ));
                                 } else {
