@@ -1356,7 +1356,7 @@ impl Get<Option<U256>> for GasPrice {
 parameter_types! {
     pub const EnableCallEVM: bool = true;
     pub const EnableCallWasmVM: bool = true;
-    pub const GasLimit: u64 = 10_000_000u64;
+    pub const GasLimit: u64 = 10_000_000_000_000u64;
 }
 
 impl U256BalanceMapping for Runtime {
