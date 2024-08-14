@@ -39,10 +39,10 @@ contract TestEvmToken is ERC20 {
 		return string(outbytes);
 	}
 	
-	function evmCallWasm(bytes20 bob, uint256 value, bytes32 contractid) public returns (string memory) {
+	function evmCallWasm(bytes20 bob, uint256 value, bytes20 contractid) public returns (string memory) {
 		
 		bytes memory input1 = bytes('{"VM":"wasm", "Account":"0x');
-		input1 = _bytesConcat(input1, bytes(_bytes32tohex(contractid)));
+		input1 = _bytesConcat(input1, bytes(_bytes20tohex(contractid)));
 		input1 = _bytesConcat(input1, bytes('", "Fun": "transfer", "InputType": ["accountid","u128"], "InputValue": ["0x'));
 		input1 = _bytesConcat(input1, bytes(_bytes20tohex(bob)));
 		input1 = _bytesConcat(input1, bytes('","'));
@@ -55,12 +55,12 @@ contract TestEvmToken is ERC20 {
 		return _callHybridVM(string(input1));
 	}
 	
-	function evmCallWasmBalance(bytes32 bob, bytes32 contractid) public returns (uint) {
+	function evmCallWasmBalance(bytes20 bob, bytes20 contractid) public returns (uint) {
 		
 		bytes memory input1 = bytes('{"VM":"wasm", "Account":"0x');
-		input1 = _bytesConcat(input1, bytes(_bytes32tohex(contractid)));
+		input1 = _bytesConcat(input1, bytes(_bytes20tohex(contractid)));
 		input1 = _bytesConcat(input1, bytes('", "Fun": "balance_of", "InputType": ["accountid"], "InputValue": ["0x'));
-		input1 = _bytesConcat(input1, bytes(_bytes32tohex(bob)));
+		input1 = _bytesConcat(input1, bytes(_bytes20tohex(bob)));
 		input1 = _bytesConcat(input1, bytes('"], "OutputType":[["u128"]]}'));
 		
 		//string input = '{"VM":"wasm", "Account":"0x' + _bytes32tohex(contractid) + '", "Fun": "balance_of", "InputType": ["accountid"], 
