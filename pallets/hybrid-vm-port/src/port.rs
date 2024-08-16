@@ -15,11 +15,11 @@
 
 use super::*;
 
-use crate::alloc::{boxed::Box, string::ToString};
+use crate::alloc::{boxed::Box, string::ToString, borrow::Cow};
 use fp_evm::{CallInfo, ExitSucceed, UsedGas};
 use hp_system::{AccountIdMapping, U256BalanceMapping};
 use pallet_contracts::{CollectEvents, DebugInfo, Determinism};
-use pallet_evm::AddressMapping;
+use pallet_evm::{AddressMapping, ExitError};
 use pallet_hybrid_vm::UnifiedAddress;
 use precompile_utils::{
     prelude::*,
@@ -222,6 +222,38 @@ impl<T: Config> Pallet<T> {
         source: H160,
         t: TransactionData,
     ) -> Result<(Option<H160>, Option<H160>, CallOrCreateInfo), DispatchErrorWithPostInfo> {
+        let to = match t.action {
+            ethereum::TransactionAction::Call(target) => Some(target),
+            _ => None,
+        };
+        let base_weight = Weight::from_parts(10_000, 0);
+
+        Ok(Self::exec_hybrid_vm(source, t).unwrap_or_else(|e| {
+            let used_gas = U256::from(<T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(
+                e.post_info.actual_weight.unwrap_or(base_weight),
+            ));
+            let error_str: &'static str = e.error.into();
+            let reason = match e.error {
+                t if t == DispatchError::from(pallet_contracts::Error::<T>::OutOfGas) => {
+                    ExitReason::Error(ExitError::OutOfGas)
+                },
+                _ => ExitReason::Error(ExitError::Other(Cow::Borrowed(error_str))),
+            };
+            let call_info = CallInfo {
+                exit_reason: reason,
+                value: vec![],
+                used_gas: UsedGas { standard: used_gas, effective: used_gas },
+                weight_info: None,
+                logs: vec![],
+            };
+            (to, None, fp_evm::CallOrCreateInfo::Call(call_info))
+        }))
+    }
+
+    pub fn exec_hybrid_vm(
+        source: H160,
+        t: TransactionData,
+    ) -> Result<(Option<H160>, Option<H160>, CallOrCreateInfo), DispatchErrorWithPostInfo> {
         let (
             input,
             value,
@@ -242,6 +274,8 @@ impl<T: Config> Pallet<T> {
             t.access_list,
         );
 
+        let base_weight = Some(Weight::from_parts(10_000, 0));
+
         match action {
             ethereum::TransactionAction::Call(target) => {
                 let vm_target = pallet_hybrid_vm::Pallet::<T>::hvm_contracts(target);
@@ -258,7 +292,7 @@ impl<T: Config> Pallet<T> {
                         let abi = pallet_hybrid_vm::Pallet::<T>::evm_fun_abi(target, selector)
                             .ok_or(DispatchErrorWithPostInfo {
                                 post_info: PostDispatchInfo {
-                                    actual_weight: None,
+                                    actual_weight: base_weight,
                                     pays_fee: Pays::Yes,
                                 },
                                 error: DispatchError::from("No abi of the selector(REVERT)"),
@@ -266,7 +300,7 @@ impl<T: Config> Pallet<T> {
 
                         let err = DispatchErrorWithPostInfo {
                             post_info: PostDispatchInfo {
-                                actual_weight: None,
+                                actual_weight: base_weight,
                                 pays_fee: Pays::Yes,
                             },
                             error: DispatchError::from("Fun abi error(REVERT)"),
@@ -296,7 +330,7 @@ impl<T: Config> Pallet<T> {
                             Err(_) => {
                                 return Err(DispatchErrorWithPostInfo {
                                     post_info: PostDispatchInfo {
-                                        actual_weight: None,
+                                        actual_weight: base_weight,
                                         pays_fee: Pays::Yes,
                                     },
                                     error: DispatchError::from(
@@ -333,17 +367,18 @@ impl<T: Config> Pallet<T> {
                                     let output =
                                         Self::convert_wasm_return(return_value.data, output_type)
                                             .map_err(|_| err_data)?;
+                                    let used_gas = U256::from(
+                                        <T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(
+                                            info.gas_consumed,
+                                        ),
+                                    );
 
                                     let call_info = CallInfo {
 								        exit_reason: ExitReason::Succeed(ExitSucceed::Returned),
 								        value: output,
 								        used_gas: UsedGas {
-									        standard: U256::from(
-										        <T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(
-											    info.gas_consumed,
-										        ),
-									        ),
-									        effective: U256::from(0u64),
+									        standard: used_gas,
+                                            effective: used_gas,
 								        },
 								        weight_info: None,
 								        logs: vec![],
@@ -373,7 +408,7 @@ impl<T: Config> Pallet<T> {
                             Err(e) => {
                                 return Err(DispatchErrorWithPostInfo {
                                     post_info: PostDispatchInfo {
-                                        actual_weight: None,
+                                        actual_weight: base_weight,
                                         pays_fee: Pays::Yes,
                                     },
                                     error: e,
@@ -384,7 +419,7 @@ impl<T: Config> Pallet<T> {
                     None => {
                         return Err(DispatchErrorWithPostInfo {
                             post_info: PostDispatchInfo {
-                                actual_weight: None,
+                                actual_weight: base_weight,
                                 pays_fee: Pays::Yes,
                             },
                             error: DispatchError::from("Not HybridVM Contract(REVERT)"),
@@ -394,7 +429,7 @@ impl<T: Config> Pallet<T> {
             },
             _ => {
                 return Err(DispatchErrorWithPostInfo {
-                    post_info: PostDispatchInfo { actual_weight: None, pays_fee: Pays::Yes },
+                    post_info: PostDispatchInfo { actual_weight: base_weight, pays_fee: Pays::Yes },
                     error: DispatchError::from("Not HybridVM Contract Call(REVERT)"),
                 });
             },

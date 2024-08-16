@@ -73,7 +73,7 @@ use fp_account::{AccountId20, EthereumSignature};
 use fp_evm::{CallOrCreateInfo, weight_per_gas};
 use fp_rpc::TransactionStatus;
 use frame_support::traits::EnsureOrigin;
-use pallet_evm::{Account as EVMAccount, AddressMapping, EnsureAccountId20, FeeCalculator, GasWeightMapping, IdentityAddressMapping, Runner};
+use pallet_evm::{Account as EVMAccount, EnsureAccountId20, FeeCalculator, GasWeightMapping, IdentityAddressMapping, Runner};
 use pallet_hybrid_vm_port::{Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction, TransactionData};
 // other
 use static_assertions::const_assert;
