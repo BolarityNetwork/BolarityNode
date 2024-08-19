@@ -29,10 +29,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use hp_system::{AccountIdMapping, EvmHybridVMExtension, U256BalanceMapping};
 use pallet_contracts::chain_extension::SysConfig;
-use pallet_evm::{
-    AddressMapping, BalanceOf, EnsureAddressTruncated, FeeCalculator, GasWeightMapping,
-    IsPrecompileResult, PrecompileHandle, PrecompileResult, PrecompileSet,
-};
+use pallet_evm::{AddressMapping, BalanceOf, EnsureAccountId20, EnsureAddressTruncated, FeeCalculator, GasWeightMapping, IdentityAddressMapping, IsPrecompileResult, PrecompileHandle, PrecompileResult, PrecompileSet};
 use pallet_evm_precompile_simple::{ECRecover, Identity, Ripemd160, Sha256};
 use sp_core::{
     crypto::{AccountId32, UncheckedFrom},
@@ -42,6 +39,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, Convert, IdentityLookup},
     BuildStorage, Perbill,
 };
+use fp_account::AccountId20;
 
 use crate as pallet_hybrid_vm;
 
@@ -82,7 +80,7 @@ impl Get<frame_system::limits::BlockWeights> for BlockWeights {
     }
 }
 
-pub type AccountId = AccountId32;
+pub type AccountId = AccountId20;
 
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
@@ -228,10 +226,10 @@ impl pallet_evm::Config for Test {
     type WeightPerGas = WeightPerGas;
 
     type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
-    type CallOrigin = EnsureAddressTruncated;
+    type CallOrigin = EnsureAccountId20;
 
-    type WithdrawOrigin = EnsureAddressTruncated;
-    type AddressMapping = CompactAddressMapping;
+    type WithdrawOrigin = EnsureAccountId20;
+    type AddressMapping = IdentityAddressMapping;
     type Currency = Balances;
 
     type RuntimeEvent = RuntimeEvent;
@@ -262,7 +260,7 @@ impl pallet_contracts::chain_extension::ChainExtension<Test> for HybridVMChainEx
     fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
     where
         E: Ext<T = Test>,
-        <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+        // <E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
     {
         let func_id = env.func_id();
         match func_id {
@@ -280,7 +278,7 @@ pub fn h160_to_accountid<E: Ext<T = Test>>(
 ) -> Result<RetVal, DispatchError> {
     let mut envbuf = env.buf_in_buf_out();
     let input: H160 = envbuf.read_as()?;
-    let account_id = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
+    let account_id: AccountId20 = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
     let account_id_slice = account_id.encode();
     let output = envbuf
         .write(&account_id_slice, false, None)
@@ -323,10 +321,10 @@ parameter_types! {
 }
 
 pub struct EnsureAccount<T, A>(sp_std::marker::PhantomData<(T, A)>);
-impl<T: Config, A: sp_core::Get<Option<AccountId>>>
+impl<T: Config, A: sp_core::Get<Option<AccountId20>>>
     EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
 where
-    <T as frame_system::Config>::AccountId: From<AccountId32>,
+    <T as frame_system::Config>::AccountId: From<AccountId20>,
 {
     type Success = T::AccountId;
 
@@ -399,8 +397,8 @@ impl U256BalanceMapping for Test {
 
 impl AccountIdMapping<Test> for Test {
     fn into_address(account_id: <Test as frame_system::Config>::AccountId) -> H160 {
-        let mut address_arr = [0u8; 32];
-        address_arr[0..32].copy_from_slice(account_id.as_byte_slice());
+        let mut address_arr = [0u8; 20];
+        address_arr[0..20].copy_from_slice(account_id.as_byte_slice());
 
         H160::from_slice(&address_arr[0..20])
     }
@@ -415,26 +413,26 @@ impl pallet_hybrid_vm::Config for Test {
     type EnableCallWasmVM = EnableCallWasmVM;
 }
 
-const A: [u8; 32] = [
+pub(crate) const A: [u8; 32] = [
     1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7,
 ];
 // const B: [u8; 32] = [
 //     2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8,
 // ];
 
-pub const ALICE: AccountId = AccountId::new(A);
+// pub(crate) const ALICE: AccountId = AccountId::from(A);
 // pub const BOB: AccountId = AccountId::new(B);
 
-const A_SHADOW: [u8; 32] = [
+pub(crate) const A_SHADOW: [u8; 32] = [
     1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-const B_SHADOW: [u8; 32] = [
+pub(crate) const B_SHADOW: [u8; 32] = [
     2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 // Account shadow is the account which data is the source account data with the last 12 bytes
 // setting zero
-pub const ALICE_SHADOW: AccountId = AccountId::new(A_SHADOW);
-pub const BOB_SHADOW: AccountId = AccountId::new(B_SHADOW);
+// pub const ALICE_SHADOW: AccountId = AccountId::from(A_SHADOW);
+// pub const BOB_SHADOW: AccountId = AccountId::from(B_SHADOW);
 
 pub struct ExtBuilder {
     existential_deposit: u64,

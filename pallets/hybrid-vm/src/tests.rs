@@ -105,6 +105,8 @@ fn test_wasm_call_evm() {
     // 1. Get wasm and evm contract bin
     let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
     let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
+    let ALICE_SHADOW: AccountId = AccountId::from(crate::mock::A_SHADOW);
+    let BOB_SHADOW: AccountId = AccountId::from(crate::mock::B_SHADOW);
 
     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
         let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
@@ -136,7 +138,7 @@ fn test_wasm_call_evm() {
         //assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
 
         // 3. Create EVM contract  and tranfer to bob token
-        let source = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let creation4evm = <Test as pallet_evm::Config>::Runner::create(
             source,
@@ -170,7 +172,7 @@ fn test_wasm_call_evm() {
         //3.1 Alice tranfer token to  Bob
         let transfer_selector = &Keccak256::digest(b"transfer(address,uint256)")[0..4];
 
-        let source_bob = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&BOB_SHADOW)[0..20]));
+        let source_bob = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW)[0..20]));
         let token: u128 = 1_883_000_000_000_000_000;
 
         let fun_para: [u8; 20] = source_bob.into();
@@ -214,7 +216,7 @@ fn test_wasm_call_evm() {
         // 4. Get BOB_SHADOW balance of EVM token
         let balance_of_selector = &Keccak256::digest(b"balanceOf(address)")[0..4];
 
-        let source_bob = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&BOB_SHADOW)[0..20]));
+        let source_bob = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW)[0..20]));
 
         let fun_para: [u8; 20] = source_bob.into();
         let balance_of_input = [&balance_of_selector[..], &[0u8; 12], &fun_para].concat();
@@ -325,6 +327,8 @@ fn test_evm_call_wasm() {
     // 1. Get wasm and evm contract bin
     let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
     let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
+    let ALICE_SHADOW: AccountId = AccountId::from(crate::mock::A_SHADOW);
+    let BOB_SHADOW: AccountId = AccountId::from(crate::mock::B_SHADOW);
 
     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
         let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
@@ -379,7 +383,7 @@ fn test_evm_call_wasm() {
         assert!(!result.did_revert());
 
         // 3. Create EVM contract
-        let source = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let creation4evm = <Test as pallet_evm::Config>::Runner::create(
             //RuntimeOrigin::signed(ALICE_SHADOW),
@@ -439,22 +443,23 @@ fn test_evm_call_wasm() {
         // 5. Call EVM contract to call wasm contract transfer wasm token to bob,  the last bytes32
         //    is the wasm contract accountid
         let evm_call_wasm_selector =
-            &Keccak256::digest(b"evmCallWasm(bytes32,uint256,bytes32)")[0..4];
+            &Keccak256::digest(b"evmCallWasm(bytes20,uint256,bytes20)")[0..4];
 
         let transfer_value: u128 = 12000000000000000000;
 
-        let wasm_contract: [u8; 32] = wasm_addr.clone().into();
+        let wasm_contract: [u8; 20] = wasm_addr.clone().into();
 
         let evm_call_wasm_input = [
             &evm_call_wasm_selector[..],
-            AsRef::<[u8; 32]>::as_ref(&BOB_SHADOW),
+            AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW),
+            &[0u8; 12],
             &[0u8; 16],
             &transfer_value.to_be_bytes(),
             &wasm_contract,
         ]
         .concat();
 
-        let source_alice = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source_alice = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let call4evm = <Test as pallet_evm::Config>::Runner::call(
             source_alice,
@@ -512,6 +517,8 @@ fn test_wasm_call_evm_balance() {
     // 1. Get wasm and evm contract bin
     let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
     let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
+    let ALICE_SHADOW: AccountId = AccountId::from(crate::mock::A_SHADOW);
+    let BOB_SHADOW: AccountId = AccountId::from(crate::mock::B_SHADOW);
 
     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
         let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
@@ -543,7 +550,7 @@ fn test_wasm_call_evm_balance() {
         //assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
 
         // 3. Create EVM contract  and tranfer to bob token
-        let source = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let creation4evm = <Test as pallet_evm::Config>::Runner::create(
             source,
@@ -577,7 +584,7 @@ fn test_wasm_call_evm_balance() {
         //3.1 Alice tranfer token to  Bob
         let transfer_selector = &Keccak256::digest(b"transfer(address,uint256)")[0..4];
 
-        let source_bob = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&BOB_SHADOW)[0..20]));
+        let source_bob = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW)[0..20]));
         let token: u128 = 1_883_000_000_000_000_000;
 
         let fun_para: [u8; 20] = source_bob.into();
@@ -628,6 +635,7 @@ fn test_wasm_call_evm_balance() {
         let call = call
             .push_arg(format!("0x{:x}", evm_addr))
             .push_arg(format!("0x{:x}", source_bob));
+        println!("call encoded data: {:?}", Encode::encode(&call).to_vec());
 
         let result = Contracts::bare_call(
             ALICE_SHADOW,
@@ -664,6 +672,8 @@ fn test_evm_call_wasm_balance() {
     // 1. Get wasm and evm contract bin
     let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
     let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
+    let ALICE_SHADOW: AccountId = AccountId::from(crate::mock::A_SHADOW);
+    let BOB_SHADOW: AccountId = AccountId::from(crate::mock::B_SHADOW);
 
     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
         let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
@@ -719,7 +729,7 @@ fn test_evm_call_wasm_balance() {
         println!("Alice transfer to Bob wasm token:{}", token);
 
         // 3. Create EVM contract
-        let source = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let creation4evm = <Test as pallet_evm::Config>::Runner::create(
             //RuntimeOrigin::signed(ALICE_SHADOW),
@@ -755,13 +765,13 @@ fn test_evm_call_wasm_balance() {
         let evm_call_wasm_selector =
             &Keccak256::digest(b"evmCallWasmBalance(bytes32,bytes32)")[0..4];
 
-        let wasm_contract: [u8; 32] = wasm_addr.clone().into();
+        let wasm_contract: [u8; 20] = wasm_addr.clone().into();
 
         let evm_call_wasm_input =
-            [&evm_call_wasm_selector[..], AsRef::<[u8; 32]>::as_ref(&BOB_SHADOW), &wasm_contract]
+            [&evm_call_wasm_selector[..], AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW), &wasm_contract]
                 .concat();
 
-        let source_alice = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source_alice = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let call4evm = <Test as pallet_evm::Config>::Runner::call(
             source_alice,
@@ -809,6 +819,8 @@ fn test_wasm_call_evm_echo() {
     // 1. Get wasm and evm contract bin
     let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
     let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
+    let ALICE_SHADOW: AccountId = AccountId::from(crate::mock::A_SHADOW);
+    let BOB_SHADOW: AccountId = AccountId::from(crate::mock::B_SHADOW);
 
     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
         let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
@@ -840,7 +852,7 @@ fn test_wasm_call_evm_echo() {
         //assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
 
         // 3. Create EVM contract
-        let source = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let creation4evm = <Test as pallet_evm::Config>::Runner::create(
             source,
@@ -929,6 +941,8 @@ fn test_evm_call_wasm_echo() {
     // 1. Get wasm and evm contract bin
     let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
     let (evm, _evm_code_hash) = contract_module::<Test>("erc20_evm_bytecode.txt", false).unwrap();
+    let ALICE_SHADOW: AccountId = AccountId::from(crate::mock::A_SHADOW);
+    let BOB_SHADOW: AccountId = AccountId::from(crate::mock::B_SHADOW);
 
     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
         let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
@@ -959,7 +973,7 @@ fn test_evm_call_wasm_echo() {
         //assert!(ContractInfoOf::<Test>::contains_key(&wasm_addr));
 
         // 3. Create EVM contract
-        let source = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let creation4evm = <Test as pallet_evm::Config>::Runner::create(
             //RuntimeOrigin::signed(ALICE_SHADOW),
@@ -993,7 +1007,7 @@ fn test_evm_call_wasm_echo() {
         // 4. Call evm contract to call wasm  using  parameters of different data types.
         let evm_call_wasm_selector = &Keccak256::digest(b"evmCallWasmProxy(string)")[0..4];
 
-        let wasm_contract: [u8; 32] = wasm_addr.clone().into();
+        let wasm_contract: [u8; 20] = wasm_addr.clone().into();
 
         let call_para = [
             r#"{"VM":"wasm", "Account":"0x"#,
@@ -1014,7 +1028,7 @@ fn test_evm_call_wasm_echo() {
         ]
         .concat();
 
-        let source_alice = H160::from_slice(&(AsRef::<[u8; 32]>::as_ref(&ALICE_SHADOW)[0..20]));
+        let source_alice = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
         let call4evm = <Test as pallet_evm::Config>::Runner::call(
             source_alice,
@@ -1076,6 +1090,9 @@ fn test_evm_call_wasm_echo() {
 fn regist_contract_works() {
     // 1. Get wasm bin
     let (wasm, wasm_code_hash) = contract_module::<Test>("erc20.wasm", true).unwrap();
+    let ALICE_SHADOW: AccountId = AccountId::from(crate::mock::A_SHADOW);
+    let BOB_SHADOW: AccountId = AccountId::from(crate::mock::B_SHADOW);
+    let ALICE: AccountId = AccountId::from(A);
 
     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
         let _ = Balances::deposit_creating(&ALICE_SHADOW, 10_000_000_000_000_000_000_000);
