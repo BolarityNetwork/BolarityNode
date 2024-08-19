@@ -38,7 +38,8 @@ use sp_runtime::{
     AccountId32, BuildStorage, DispatchError, Perbill,
 };
 // Frontier
-use pallet_evm::{AddressMapping, BalanceOf, EnsureAddressTruncated, FeeCalculator};
+use pallet_evm::{AddressMapping, BalanceOf, EnsureAccountId20, EnsureAddressTruncated, FeeCalculator, IdentityAddressMapping};
+use fp_account::AccountId20;
 
 // Contracts
 use pallet_contracts::chain_extension::{Environment, Ext, InitState, RetVal};
@@ -54,7 +55,7 @@ pub type SignedExtra = (frame_system::CheckSpecVersion<Test>,);
 
 type Balance = u128;
 
-type AccountId = AccountId32;
+type AccountId = AccountId20;
 
 frame_support::construct_runtime! {
     pub enum Test {
@@ -179,9 +180,9 @@ impl pallet_evm::Config for Test {
     type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
     type WeightPerGas = WeightPerGas;
     type BlockHashMapping = crate::EthereumBlockHashMapping<Self>;
-    type CallOrigin = EnsureAddressTruncated;
-    type WithdrawOrigin = EnsureAddressTruncated;
-    type AddressMapping = CompactAddressMapping;
+    type CallOrigin = EnsureAccountId20;
+    type WithdrawOrigin = EnsureAccountId20;
+    type AddressMapping = IdentityAddressMapping;
     type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
     type PrecompilesType = ();
@@ -211,8 +212,8 @@ impl pallet_contracts::chain_extension::ChainExtension<Test> for HybridVMChainEx
     fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
     where
         E: Ext<T = Test>,
-        <E::T as frame_system::Config>::AccountId:
-            UncheckedFrom<<E::T as frame_system::Config>::Hash> + AsRef<[u8]>,
+        // <E::T as frame_system::Config>::AccountId:
+        //     UncheckedFrom<<E::T as frame_system::Config>::Hash> + AsRef<[u8]>,
     {
         let func_id = env.func_id();
         match func_id {
@@ -230,7 +231,7 @@ pub fn h160_to_accountid<E: Ext<T = Test>>(
 ) -> Result<RetVal, DispatchError> {
     let mut envbuf = env.buf_in_buf_out();
     let input: H160 = envbuf.read_as()?;
-    let account_id = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
+    let account_id: AccountId20 = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
     let account_id_slice = account_id.encode();
     let output = envbuf
         .write(&account_id_slice, false, None)
@@ -273,10 +274,10 @@ parameter_types! {
 }
 
 pub struct EnsureAccount<T, A>(sp_std::marker::PhantomData<(T, A)>);
-impl<T: Config, A: sp_core::Get<Option<AccountId>>>
+impl<T: Config, A: sp_core::Get<Option<AccountId20>>>
     EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
 where
-    <T as frame_system::Config>::AccountId: From<AccountId>,
+    <T as frame_system::Config>::AccountId: From<AccountId20>,
 {
     type Success = T::AccountId;
 
@@ -350,8 +351,8 @@ impl U256BalanceMapping for Test {
 
 impl AccountIdMapping<Test> for Test {
     fn into_address(account_id: <Test as frame_system::Config>::AccountId) -> H160 {
-        let mut address_arr = [0u8; 32];
-        address_arr[0..32].copy_from_slice(account_id.as_byte_slice());
+        let mut address_arr = [0u8; 20];
+        address_arr[0..20].copy_from_slice(account_id.as_byte_slice());
 
         H160::from_slice(&address_arr[0..20])
     }
@@ -446,10 +447,10 @@ fn address_build(seed: u8) -> AccountInfo {
     let public_key = &libsecp256k1::PublicKey::from_secret_key(&secret_key).serialize()[1..65];
     let address = H160::from(H256::from(keccak_256(public_key)));
 
-    let mut data = [0u8; 32];
+    let mut data = [0u8; 20];
     data[0..20].copy_from_slice(&address[..]);
 
-    AccountInfo { private_key, account_id: AccountId::from(Into::<[u8; 32]>::into(data)), address }
+    AccountInfo { private_key, account_id: AccountId::from(Into::<[u8; 20]>::into(data)), address }
 }
 
 // This function basically just builds a genesis storage key/value store according to

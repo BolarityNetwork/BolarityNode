@@ -456,6 +456,7 @@ fn test_evm_call_wasm() {
             &[0u8; 16],
             &transfer_value.to_be_bytes(),
             &wasm_contract,
+            &[0u8; 12],
         ]
         .concat();
 
@@ -763,12 +764,12 @@ fn test_evm_call_wasm_balance() {
         // 4. Call evm contract to call wasm for getting BOB_SHADOW balance of wasm token.  H160:
         //    BOB_SHADOW's address , the last bytes32 is the wasm contract accountid
         let evm_call_wasm_selector =
-            &Keccak256::digest(b"evmCallWasmBalance(bytes32,bytes32)")[0..4];
+            &Keccak256::digest(b"evmCallWasmBalance(bytes20,bytes20)")[0..4];
 
         let wasm_contract: [u8; 20] = wasm_addr.clone().into();
 
         let evm_call_wasm_input =
-            [&evm_call_wasm_selector[..], AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW), &wasm_contract]
+            [&evm_call_wasm_selector[..], AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW), &[0u8; 12], &wasm_contract, &[0u8; 12]]
                 .concat();
 
         let source_alice = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));

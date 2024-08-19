@@ -22,6 +22,7 @@ sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 pallet-contracts = { workspace = true, default-features = false }
 # Frontier
+fp-account = { workspace = true }
 fp-consensus = { workspace = true }
 fp-ethereum = { workspace = true }
 fp-evm = { workspace = true }
@@ -36,7 +37,7 @@ hp-system =  { workspace = true, default-features = false }
 [dev-dependencies]
 byte-slice-cast= { workspace = true }
 hex = { workspace = true }
-libsecp256k1 = { workspace = true, features = ["static-context", "hmac"] }
+libsecp256k1 = { workspace = true, default-features = false }
 rlp = { workspace = true }
 sha3 = { workspace = true }
 # Substrate
@@ -53,6 +54,7 @@ ink_env = { workspace = true, default-features = false, features = ["no-panic-ha
 [features]
 default = ["std"]
 std = [
+	"ink_env/std",
 	"ethereum/std",
 	"evm/std",
 	"ethereum-types/std",
@@ -64,6 +66,7 @@ std = [
 	"frame-system/std",
 	"sp-io/std",
 	"sp-runtime/std",
+	"sp-core/std",
 	# Frontier
 	"precompile-utils/std",
 	"fp-consensus/std",

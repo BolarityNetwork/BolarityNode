@@ -6470,6 +6470,7 @@ dependencies = [
  "ethereum",
  "ethereum-types",
  "evm",
+ "fp-account",
  "fp-consensus",
  "fp-ethereum",
  "fp-evm",
