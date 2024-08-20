@@ -153,7 +153,6 @@ impl<C: Config> InterCall<C> {
 
         let input: Vec<u8>;
         let target: H160;
-
         match vm_codec::evm_encode(&input0) {
             Ok(r) => (input, target) = r,
             Err(e) => {

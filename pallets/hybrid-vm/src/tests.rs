@@ -261,10 +261,9 @@ fn test_wasm_call_evm() {
         let call = ExecutionInput::new(Selector::new(a));
 
         let transfer_value: u128 = 12_000_000_000_000_000_000;
-
         let call = call
-            .push_arg(format!("0x{:x}", evm_addr))
-            .push_arg(format!("0x{:x}", source_bob))
+            .push_arg(evm_addr)
+            .push_arg(source_bob)
             .push_arg(transfer_value);
 
         let result = Contracts::bare_call(
