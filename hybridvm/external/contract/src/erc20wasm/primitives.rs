@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use core::array::TryFromSliceError;
+use core::fmt;
 use derive_more::From;
 #[cfg(feature = "std")]
 use ink::storage::traits::StorageLayout;
@@ -52,6 +53,16 @@ use {
 )]
 #[cfg_attr(feature = "std", derive(TypeInfo, DecodeAsType, EncodeAsType))]
 pub struct AccountId(pub [u8; 20]);
+
+impl fmt::Display for AccountId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x")?;
+        for byte in &self.0 {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
+    }
+}
 
 impl AsRef<[u8; 20]> for AccountId {
     #[inline]
