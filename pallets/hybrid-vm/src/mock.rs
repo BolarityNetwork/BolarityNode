@@ -16,6 +16,7 @@
 use super::*;
 
 use byte_slice_cast::AsByteSlice;
+use fp_account::AccountId20;
 use fp_evm::Precompile;
 use frame_support::{
     derive_impl,
@@ -28,18 +29,16 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use hp_system::{AccountIdMapping, EvmHybridVMExtension, U256BalanceMapping};
-use pallet_contracts::chain_extension::SysConfig;
-use pallet_evm::{AddressMapping, BalanceOf, EnsureAccountId20, EnsureAddressTruncated, FeeCalculator, GasWeightMapping, IdentityAddressMapping, IsPrecompileResult, PrecompileHandle, PrecompileResult, PrecompileSet};
-use pallet_evm_precompile_simple::{ECRecover, Identity, Ripemd160, Sha256};
-use sp_core::{
-    crypto::{AccountId32, UncheckedFrom},
-    ConstBool, H256, U256,
+use pallet_evm::{
+    AddressMapping, BalanceOf, EnsureAccountId20, FeeCalculator, GasWeightMapping,
+    IdentityAddressMapping, IsPrecompileResult, PrecompileHandle, PrecompileResult, PrecompileSet,
 };
+use pallet_evm_precompile_simple::{ECRecover, Identity, Ripemd160, Sha256};
+use sp_core::{ConstBool, H256, U256};
 use sp_runtime::{
     traits::{BlakeTwo256, Convert, IdentityLookup},
     BuildStorage, Perbill,
 };
-use fp_account::AccountId20;
 
 use crate as pallet_hybrid_vm;
 
@@ -278,7 +277,8 @@ pub fn h160_to_accountid<E: Ext<T = Test>>(
 ) -> Result<RetVal, DispatchError> {
     let mut envbuf = env.buf_in_buf_out();
     let input: H160 = envbuf.read_as()?;
-    let account_id: AccountId20 = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
+    let account_id: AccountId20 =
+        <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
     let account_id_slice = account_id.encode();
     let output = envbuf
         .write(&account_id_slice, false, None)

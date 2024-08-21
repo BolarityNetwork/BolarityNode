@@ -15,7 +15,7 @@
 
 use super::*;
 
-use crate::alloc::{boxed::Box, string::ToString, borrow::Cow};
+use crate::alloc::{borrow::Cow, boxed::Box, string::ToString};
 use fp_evm::{CallInfo, ExitSucceed, UsedGas};
 use hp_system::{AccountIdMapping, U256BalanceMapping};
 use pallet_contracts::{CollectEvents, DebugInfo, Determinism};
@@ -374,15 +374,15 @@ impl<T: Config> Pallet<T> {
                                     );
 
                                     let call_info = CallInfo {
-								        exit_reason: ExitReason::Succeed(ExitSucceed::Returned),
-								        value: output,
-								        used_gas: UsedGas {
-									        standard: used_gas,
+                                        exit_reason: ExitReason::Succeed(ExitSucceed::Returned),
+                                        value: output,
+                                        used_gas: UsedGas {
+                                            standard: used_gas,
                                             effective: used_gas,
-								        },
-								        weight_info: None,
-								        logs: vec![],
-							        };
+                                        },
+                                        weight_info: None,
+                                        logs: vec![],
+                                    };
                                     return Ok((
                                         Some(target),
                                         None,

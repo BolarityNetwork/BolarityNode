@@ -31,15 +31,17 @@ use frame_support::{
     ConsensusEngineId, PalletId,
 };
 
-use sp_core::{crypto::UncheckedFrom, hashing::keccak_256, ConstBool, H160, H256, U256};
+use sp_core::{hashing::keccak_256, ConstBool, H160, H256, U256};
 
 use sp_runtime::{
     traits::{BlakeTwo256, Convert, Dispatchable, IdentityLookup},
-    AccountId32, BuildStorage, DispatchError, Perbill,
+    BuildStorage, DispatchError, Perbill,
 };
 // Frontier
-use pallet_evm::{AddressMapping, BalanceOf, EnsureAccountId20, EnsureAddressTruncated, FeeCalculator, IdentityAddressMapping};
 use fp_account::AccountId20;
+use pallet_evm::{
+    AddressMapping, BalanceOf, EnsureAccountId20, FeeCalculator, IdentityAddressMapping,
+};
 
 // Contracts
 use pallet_contracts::chain_extension::{Environment, Ext, InitState, RetVal};
@@ -231,7 +233,8 @@ pub fn h160_to_accountid<E: Ext<T = Test>>(
 ) -> Result<RetVal, DispatchError> {
     let mut envbuf = env.buf_in_buf_out();
     let input: H160 = envbuf.read_as()?;
-    let account_id: AccountId20 = <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
+    let account_id: AccountId20 =
+        <Test as pallet_evm::Config>::AddressMapping::into_account_id(input);
     let account_id_slice = account_id.encode();
     let output = envbuf
         .write(&account_id_slice, false, None)

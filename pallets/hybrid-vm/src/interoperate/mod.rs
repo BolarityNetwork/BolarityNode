@@ -71,10 +71,6 @@ struct CallReturn {
     ReturnValue: Vec<String>,
 }
 
-fn str2s(s: String) -> &'static str {
-    Box::leak(s.into_boxed_str())
-}
-
 impl<T: Config> InterCall<T> {
     pub fn call_wasm_vm(
         origin: OriginFor<T>,
@@ -155,7 +151,7 @@ impl<C: Config> InterCall<C> {
         let target: H160;
         match vm_codec::evm_encode(&input0) {
             Ok(r) => (input, target) = r,
-            Err(e) => {
+            Err(_) => {
                 return Err(DispatchError::from(Error::<C>::EvmEncodeError));
             },
         }

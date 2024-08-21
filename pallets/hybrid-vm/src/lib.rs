@@ -35,7 +35,7 @@ use pallet_contracts::{
 };
 use scale_info::prelude::{string::String, vec};
 use sha3::{Digest, Keccak256};
-use sp_core::{H160, U256};
+use sp_core::H160;
 use sp_runtime::{
     traits::{BlakeTwo256, Hash},
     BoundedVec, DispatchError,

@@ -261,10 +261,7 @@ fn test_wasm_call_evm() {
         let call = ExecutionInput::new(Selector::new(a));
 
         let transfer_value: u128 = 12_000_000_000_000_000_000;
-        let call = call
-            .push_arg(evm_addr)
-            .push_arg(source_bob)
-            .push_arg(transfer_value);
+        let call = call.push_arg(evm_addr).push_arg(source_bob).push_arg(transfer_value);
 
         let result = Contracts::bare_call(
             ALICE_SHADOW,
@@ -631,9 +628,7 @@ fn test_wasm_call_evm_balance() {
         let mut a: [u8; 4] = Default::default();
         a.copy_from_slice(&BlakeTwo256::hash(b"wasmCallEvmBalance")[0..4]);
         let call = ExecutionInput::new(Selector::new(a));
-        let call = call
-            .push_arg(evm_addr)
-            .push_arg(source_bob);
+        let call = call.push_arg(evm_addr).push_arg(source_bob);
 
         let result = Contracts::bare_call(
             ALICE_SHADOW,
@@ -765,9 +760,14 @@ fn test_evm_call_wasm_balance() {
 
         let wasm_contract: [u8; 20] = wasm_addr.clone().into();
 
-        let evm_call_wasm_input =
-            [&evm_call_wasm_selector[..], AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW), &[0u8; 12], &wasm_contract, &[0u8; 12]]
-                .concat();
+        let evm_call_wasm_input = [
+            &evm_call_wasm_selector[..],
+            AsRef::<[u8; 20]>::as_ref(&BOB_SHADOW),
+            &[0u8; 12],
+            &wasm_contract,
+            &[0u8; 12],
+        ]
+        .concat();
 
         let source_alice = H160::from_slice(&(AsRef::<[u8; 20]>::as_ref(&ALICE_SHADOW)[0..20]));
 
