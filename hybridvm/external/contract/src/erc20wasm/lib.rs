@@ -367,15 +367,15 @@ mod erc20 {
         #[ink(message)]
         pub fn wasmCallEvmBalance(
             &mut self,
-            acnt: String,
-            who: String,
+            acnt: WalletId,
+            who: WalletId,
         ) -> Result<Balance> {
             //let caller = self.env().caller();
 
             let mut input = r#"{"VM":"evm", "Account":""#.to_string();
-            input.push_str(&acnt);
+            input.push_str(&acnt.to_string());
             input.push_str(r#"", "Fun":"balanceOf(address)", "InputType":["address"], "InputValue":[""#);
-            input.push_str(&who);
+            input.push_str(&who.to_string());
             input.push_str(r#""],  "OutputType":[["uint"]]}"#);
 
             //input = '{"VM":"evm", "Account":"0x' + acnt.to_string() + '", "Fun":"balanceOf(address)", "InputType":["address"],

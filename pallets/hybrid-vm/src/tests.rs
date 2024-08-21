@@ -631,13 +631,9 @@ fn test_wasm_call_evm_balance() {
         let mut a: [u8; 4] = Default::default();
         a.copy_from_slice(&BlakeTwo256::hash(b"wasmCallEvmBalance")[0..4]);
         let call = ExecutionInput::new(Selector::new(a));
-
-        println!("selector: {:?}", hex::encode(a));
-        let evm_addr_test = "0x3ed62137c5db927cb137c26455969116bf0c23cb";
-        println!("source bob address:{:?}", source_bob);
         let call = call
-            .push_arg(format!("0x{:x}", evm_addr))
-            .push_arg(format!("0x{:x}", source_bob));
+            .push_arg(evm_addr)
+            .push_arg(source_bob);
 
         let result = Contracts::bare_call(
             ALICE_SHADOW,
