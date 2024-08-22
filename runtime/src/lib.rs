@@ -75,7 +75,7 @@ use fp_rpc::TransactionStatus;
 use frame_support::traits::EnsureOrigin;
 use pallet_evm::{
     Account as EVMAccount, EnsureAccountId20, FeeCalculator, GasWeightMapping,
-    IdentityAddressMapping, Runner,
+    IdentityAddressMapping, Runner, AddressMapping
 };
 use pallet_hybrid_vm_port::{
     Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
