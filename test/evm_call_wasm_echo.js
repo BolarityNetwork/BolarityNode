@@ -299,14 +299,14 @@ async function main() {
         {
             "inputs": [
                 {
-                    "internalType": "bytes32",
+                    "internalType": "bytes20",
                     "name": "bob",
-                    "type": "bytes32"
+                    "type": "bytes20"
                 },
                 {
-                    "internalType": "bytes32",
+                    "internalType": "bytes20",
                     "name": "contractid",
-                    "type": "bytes32"
+                    "type": "bytes20"
                 }
             ],
             "name": "evmCallWasmBalance",

@@ -10,8 +10,8 @@ async function main() {
 
     // evm call wasm
     // update the contract address to the address of actual contract you've deployed before
-    const evmContractAddress = '0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963';
-    const wasmContractAddress = '0x5ffB213400B83E0B2f607b18456C1D6F62f28218';
+    const evmContractAddress = '0x962c0940d72E7Db6c9a5F81f1cA87D8DB2B82A23';
+    const wasmContractAddress = '0x541fBd84BF70a1c48019967E6a3930809D0926b1';
 
     const transferTo = '0x3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0';   // Baltathar
     const amount = 25_000_000_000_000_000_000n;
@@ -302,14 +302,14 @@ async function main() {
         {
             "inputs": [
                 {
-                    "internalType": "bytes32",
+                    "internalType": "bytes20",
                     "name": "bob",
-                    "type": "bytes32"
+                    "type": "bytes20"
                 },
                 {
-                    "internalType": "bytes32",
+                    "internalType": "bytes20",
                     "name": "contractid",
-                    "type": "bytes32"
+                    "type": "bytes20"
                 }
             ],
             "name": "evmCallWasmBalance",
