@@ -10,6 +10,7 @@ repository = { workspace = true }
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+byte-slice-cast= { workspace = true, default-features = false }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
@@ -79,7 +80,7 @@ fp-self-contained = { workspace = true, features = ["serde"] }
 # Frontier FRAME
 pallet-base-fee = { workspace = true }
 pallet-dynamic-fee = { workspace = true }
-pallet-ethereum = { workspace = true }
+#pallet-ethereum = { workspace = true }
 pallet-evm = { workspace = true }
 pallet-evm-chain-id = { workspace = true }
 pallet-evm-precompile-modexp = { workspace = true }
@@ -90,6 +91,10 @@ pallet-hotfix-sufficients = { workspace = true }
 
 # Local Pallet
 pallet-template = { path = "../pallets/template", default-features = false }
+pallet-evm-precompile-call-hybrid-vm = { workspace = true, default-features = false }
+pallet-hybrid-vm = { workspace = true, default-features = false }
+pallet-hybrid-vm-port = { workspace = true, default-features = false }
+hp-system = { workspace = true, default-features = false}
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -163,7 +168,7 @@ std = [
     # Frontier FRAME
     "pallet-base-fee/std",
     "pallet-dynamic-fee/std",
-    "pallet-ethereum/std",
+#    "pallet-ethereum/std",
     "pallet-evm-chain-id/std",
     "pallet-evm-precompile-dispatch/std",
     "pallet-evm-precompile-modexp/std",
@@ -171,13 +176,17 @@ std = [
     "pallet-evm-precompile-simple/std",
     "pallet-evm/std",
     "pallet-hotfix-sufficients/std",
+    # Local Pallet
+    "pallet-evm-precompile-call-hybrid-vm/std",
+    "pallet-hybrid-vm/std",
+    "pallet-hybrid-vm-port/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-system-benchmarking/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
-    "pallet-ethereum/runtime-benchmarks",
+#    "pallet-ethereum/runtime-benchmarks",
     "pallet-evm/runtime-benchmarks",
     "pallet-grandpa/runtime-benchmarks",
     "pallet-hotfix-sufficients/runtime-benchmarks",
@@ -185,4 +194,5 @@ runtime-benchmarks = [
     "pallet-contracts/runtime-benchmarks",
     "pallet-sudo/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+    "pallet-hybrid-vm-port/runtime-benchmarks",
 ]
