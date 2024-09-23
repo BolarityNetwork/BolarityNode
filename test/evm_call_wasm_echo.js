@@ -16,6 +16,7 @@ async function main() {
     const providerUrl = 'http://localhost:9944';
     const provider = new ethers.JsonRpcProvider(providerUrl);
     const wallet = new ethers.Wallet(privateKey, provider);
+    // compiled from hybridvm/external/contract/src/erc20evm/TestEvmToken.sol
     const abi = [
         {
             "inputs": [],

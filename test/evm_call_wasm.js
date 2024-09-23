@@ -14,11 +14,12 @@ async function main() {
     const wasmContractAddress = '0x541fBd84BF70a1c48019967E6a3930809D0926b1';
 
     const transferTo = '0x3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0';   // Baltathar
-    const amount = 25_000_000_000_000_000_000n;
+    const amount = 1_000_000_000_000_000_000n;  // 1 wtt token
 
     const providerUrl = 'http://localhost:9944';
     const provider = new ethers.JsonRpcProvider(providerUrl);
     const wallet = new ethers.Wallet(privateKey, provider);
+    // compiled from hybridvm/external/contract/src/erc20evm/TestEvmToken.sol
     const abi = [
         {
             "inputs": [],

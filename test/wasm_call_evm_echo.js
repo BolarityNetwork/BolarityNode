@@ -16,6 +16,7 @@ async function main() {
     const evmContractAddress = '0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963';
     const wasmContractAddress = '0x5ffB213400B83E0B2f607b18456C1D6F62f28218';
 
+    // first compiled the wasm contract to metadata, using `cargo contract build`
     const metadataPath = '../hybridvm/external/contract/src/erc20wasm/target/ink/erc20.json';
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
     const wasmContractInstance = new ContractPromise(api, metadata, wasmContractAddress);

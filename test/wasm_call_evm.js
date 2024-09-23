@@ -16,8 +16,9 @@ async function main() {
     const evmContractAddress = '0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963';
     const wasmContractAddress = '0x5ffB213400B83E0B2f607b18456C1D6F62f28218';
     const transferTo = '0x3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0';   // Baltathar
-    const amount = 8_000_000_000_000_000_000n;
+    const amount = 2_000_000_000_000_000_000n;
 
+    // first compiled the wasm contract to metadata, using `cargo contract build`
     const metadataPath = '../hybridvm/external/contract/src/erc20wasm/target/ink/erc20.json';
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
     const wasmContractInstance = new ContractPromise(api, metadata, wasmContractAddress);

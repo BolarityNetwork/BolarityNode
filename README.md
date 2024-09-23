@@ -134,5 +134,9 @@ The project includes a set of test scripts to help you verify the functionality 
 To run the tests, navigate to the `test/` directory and execute the desired script using Node.js. For example:
 
 ```bash
+npm install
 node test/deploy_evm_contract.js
+```
+To build the wasm contract before deploying, navigate to the `hybridvm/external/contract/src/erc20wasm` directory and `cargo contract build`.  
+Remember to first deploy contracts and then update the contract addresses in the test scripts before running them.
 
